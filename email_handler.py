@@ -11,7 +11,7 @@ def read_Email_Settings():
     try:
         config = configparser.ConfigParser()
         # config.optionxform=str   #By default config returns keys from Settings file in lower case. This line preserves the case for key
-        config.read(os.path.dirname(os.path.realpath(__file__)) + '/settings.ini')
+        config.read('settings.ini')
 
 
         global FROM_ADD

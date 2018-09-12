@@ -36,7 +36,7 @@ class startScherm(QtWidgets.QMainWindow):
         import email_sender
 
     def selectDir(self):
-        filename = os.path.dirname(os.path.realpath(__file__)) + '/settings.ini'
+        filename ='settings.ini' #os.path.dirname(os.path.realpath(__file__)) + '/settings.ini'
         parser = configparser.ConfigParser()
         parser.read(filename)
 

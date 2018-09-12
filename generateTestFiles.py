@@ -15,7 +15,7 @@ import configparser, inspect, os
 def read_Settings():
     try:
         config = configparser.ConfigParser()
-        config.read(os.path.dirname(os.path.realpath(__file__)) + '/settings.ini')
+        config.read('settings.ini')
 
         global PLOEGINFO
         global RONDEINFO

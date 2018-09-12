@@ -64,7 +64,7 @@ def readSettings():
     
     try:
         config = configparser.ConfigParser()
-        config.read(os.path.dirname(os.path.realpath(__file__)) + '/settings.ini')
+        config.read('settings.ini')
 
         global RONDEINFO
         global DEFAULT_OUTPUTDIR
