@@ -1,6 +1,4 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from inschrijving_handler import Class_Inschrijvingen
-import email_sender
 import sys
 
 class Aanmelden(QtWidgets.QDialog):   
@@ -8,11 +6,13 @@ class Aanmelden(QtWidgets.QDialog):
         super(Aanmelden, self).__init__(parent)
         uic.loadUi('code/ui/Aanmelden.ui', self)
         self.setWindowTitle('Aanmelden')
+        
         self.setup()
         self.show()
 
     def setup(self):
         #fill Combobox
+        from inschrijving_handler import Class_Inschrijvingen
         self.PH = Class_Inschrijvingen()
         for ploegnaam in self.PH.getPloegNamen():
             self.ploegnaamTxt.addItem(ploegnaam)

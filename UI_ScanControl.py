@@ -1,6 +1,4 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from score_handler import Class_Scores
-from ronde_handler import Class_Rondes
 import cv2
 
 class Control(QtWidgets.QMainWindow):   
@@ -12,6 +10,8 @@ class Control(QtWidgets.QMainWindow):
         self.setup()
             
     def setup(self):
+        from score_handler import Class_Scores
+        from ronde_handler import Class_Rondes
         self.SH = Class_Scores()
         self.RH = Class_Rondes()
         self.AllScanData = self.SH.getAllScanResults()

@@ -18,7 +18,6 @@ def read_Settings():
         global DRANKKAARTGELD
         global PLOEGGENERAL
         global QUIZFOLDER
-
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         
         PLOEGINFO = QUIZFOLDER + config.get('PATHS', 'PLOEGINFO')
@@ -40,7 +39,10 @@ def read_Settings():
 #=====================================================================================
 
 class Class_Inschrijvingen():
-    
+
+    def __init__(self):
+        read_Settings()
+        
     def nieuwePloeg(self, ploegdata):
         dubbelenaam = self.getRowIndex(ploegdata[0])
         if dubbelenaam == 0:
@@ -387,5 +389,5 @@ class Class_Inschrijvingen():
     
 #=================================================================================================
 
-read_Settings()
+#read_Settings()
 

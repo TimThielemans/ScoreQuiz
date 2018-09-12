@@ -5,7 +5,10 @@ import configparser
 import os, parser
 import sys
 sys.path.append('code/')
-
+import UI_Inschrijvingen
+import UI_ScanControl
+import UI_Aanmelden
+import UI_Admin
 
 class startScherm(QtWidgets.QMainWindow):   
     def __init__(self, parent=None):
@@ -18,7 +21,7 @@ class startScherm(QtWidgets.QMainWindow):
         geldig = self.selectDir()
         if geldig:
             self.nieuwePloegBtn.clicked.connect(lambda: UI_Inschrijvingen.Inschrijving(self))
-            #self.adminBtn.clicked.connect()
+            self.adminBtn.clicked.connect(self.admin)
             self.aanmeldenBtn.clicked.connect(lambda: UI_Aanmelden.Aanmelden(self))
             self.scansVerwerkenBtn.clicked.connect(self.scansVerwerken)
             self.scansControlerenBtn.clicked.connect(lambda: UI_ScanControl.Control(self))
@@ -26,20 +29,19 @@ class startScherm(QtWidgets.QMainWindow):
             self.scorebordBtn.clicked.connect(self.scorebord)
         else:
             self.msgBox('Geen geldige directory, opgestart in default mode', 'Niet geldig')
-            
-        import UI_Inschrijvingen
-        import UI_ScanControl
-        import UI_Aanmelden
+
         import decodeSheets
         import generateScorebord
-        from inschrijving_handler import Class_Inschrijvingen
         import email_sender
+        
 
     def selectDir(self):
-        filename ='settings.ini' #os.path.dirname(os.path.realpath(__file__)) + '/settings.ini'
+        filename = 'settings.ini'
         parser = configparser.ConfigParser()
         parser.read(filename)
-
+        global WACHTWOORD
+        WACHTWOORD = parser.get('COMMON', 'wachtwoord')
+        
         debug = 1
         default = 'Test/'
         if debug == 1:
@@ -53,7 +55,7 @@ class startScherm(QtWidgets.QMainWindow):
                 directory = default
         else:
             directory = default
-
+        
         try:
             open(directory + parser.get('PATHS', 'SHEETINFO'))
             gelukt= True
@@ -115,7 +117,14 @@ class startScherm(QtWidgets.QMainWindow):
             text = 'Het scorebord werd berekend zonder fouten!'
             titel = 'Klaar'
         self.msgBox(text, titel)
+
+    def admin(self):
+        wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
+        if ok and wachtwoord == WACHTWOORD:
+            UI_Admin.Admin(self)
         
+
+            
     def msgBox(self, text, titel):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)

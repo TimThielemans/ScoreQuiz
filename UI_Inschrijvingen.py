@@ -1,6 +1,4 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from inschrijving_handler import Class_Inschrijvingen
-import email_sender
 import sys
 
 class Inschrijving(QtWidgets.QDialog):   
@@ -10,10 +8,13 @@ class Inschrijving(QtWidgets.QDialog):
         self.setWindowTitle('Nieuwe Ploeg')
         self.show()
 
+        from inschrijving_handler import Class_Inschrijvingen
         self.PH = Class_Inschrijvingen()
         self.InschrijvenBtn.clicked.connect(self.inschrijving)
             
     def inschrijving(self):
+        
+        import email_sender
         ploegnaam = self.PloegnaamTxt.toPlainText()
         voornaam = self.VoornaamTxt.toPlainText()
         achternaam = self.AchternaamTxt.toPlainText()
