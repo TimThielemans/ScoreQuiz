@@ -123,7 +123,7 @@ def sendUitnodigingen():
             pass
 
 read_Settings()
-#sendUitnodigingen()
+sendUitnodigingen()
 
 
                 

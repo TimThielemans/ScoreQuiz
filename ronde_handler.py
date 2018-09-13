@@ -36,12 +36,12 @@ class Class_Rondes():
     def nieuweRonde(self, rondeData):
         RN = self.aantalRondes()+1
         AS = 0
-        NOQ = int(rondeData[1])*(1+2*int(rondeData[2]))
+        NOQ = int(rondeData[2])*(1+2*int(rondeData[3]))
         AS = self.calculateSheet(NOQ)
         if AS>0:
             with open(RONDEINFO, 'a+') as fw:
                 writer = csv.DictWriter(fw, FIELDNAMES)
-                writer.writerow({'RN': RN, 'Ronde': rondeData[0], 'Aantal' : rondeData[1], 'Super': rondeData[2] , 'Bonus': rondeData[3], 'Sheet' : AS})
+                writer.writerow({'RN': RN, 'Ronde': rondeData[0], 'Afkorting':rondeData[1], 'Aantal' : rondeData[2], 'Super': rondeData[3] , 'Bonus': rondeData[4], 'Sheet' : AS})
             self.autoUpdate()
         else:
             raise NameError('AnswerSheet niet beschikbaar voor een dergelijke ronde!')
@@ -55,7 +55,7 @@ class Class_Rondes():
                 writer = csv.writer(fw)
                 writer.writerows(data[0:X])
                 writer.writerows(data[X+1:])
-            self.autoUpdate()
+            self.autoUpdate() #zet de nummering terug juist
         except NameError:
             raise
         
@@ -64,7 +64,7 @@ class Class_Rondes():
         data = self.getData()
         with open(RONDEINFO, 'wt') as fw:
             writer = csv.writer(fw)
-            writer.writerow(data[0])
+            writer.writerow(data[0]) #behoud nog juist de file met de juiste headers
 
     def veranderRondenaam(self, oud, nieuw):
         try:
@@ -77,7 +77,6 @@ class Class_Rondes():
                 writer.writerows(data)
         except NameError:
             raise       
-
 
     def wisselRondenummers(self, ronde1, ronde2):
         try:
@@ -96,18 +95,44 @@ class Class_Rondes():
         except NameError:
             raise
 
-    def updateSettings(self, ronde, newSettings):
+    def insertRondeBefore(self, ronde1, ronde2):
+        try:
+            X1 = self.getRowIndex(ronde1)
+            X2 = self.getRowIndex(ronde2)
+            Y = FIELDNAMES.index('RN')
+            data = self.getData()
+            newdata = [['0' for i in range(len(data))] for j in range(len(data[0]))]
+            
+            if X1>X2:
+                newdata[0:X2] = data[0:X2]
+                newdata[X2] = data[X1]
+                newdata[X2+1:X1+1] = data[X2:X1]
+                newdata[X1+1:] = data[X1+1:]
+            else:
+                newdata[0:X1] = data[0:X1]
+                newdata[X1:X2] = data[X1+1:X2+1]
+                newdata[X2] = data[X1]
+                newdata[X2+1:] = data[X2+1:]
+            with open(RONDEINFO, 'w') as fw:
+                writer = csv.writer(fw)
+                writer.writerows(newdata)
+            self.autoUpdate()
+        except NameError:
+            raise
+
+    def updateRondeInfo(self, ronde, newSettings):
         try:
             X = self.getRowIndex(ronde)
             Yindexes = []
             Yindexes.append(FIELDNAMES.index('Ronde'))
+            Yindexes.append(FIELDNAMES.index('Afkorting'))
             Yindexes.append(FIELDNAMES.index('Aantal'))
             Yindexes.append(FIELDNAMES.index('Super'))
             Yindexes.append(FIELDNAMES.index('Bonus'))
             data = self.getData()
             for i, Y in enumerate(Yindexes):
                 data[X][Y] = newSettings[i]
-            data[X][FIELDNAMES.index('Sheet')] = self.calculateSheet(int(newSettings[1])*(1+2*int(newSettings[2]))) 
+            data[X][FIELDNAMES.index('Sheet')] = self.calculateSheet(int(newSettings[2])*(1+2*int(newSettings[3]))) 
             with open(RONDEINFO, 'w') as fw:
                 writer = csv.writer(fw)
                 writer.writerows(data)
@@ -194,7 +219,6 @@ class Class_Rondes():
         except NameError:
             raise
 
-
     def getRondeInfo(self, ronde):
         try:
             X = self.getRowIndex(ronde)
@@ -207,6 +231,12 @@ class Class_Rondes():
         data = self.getData()
         for i in range(0, self.aantalRondes()):
             yield data[i+1]
+
+    def getRondeNames(self):
+        data = self.getData()
+        for i in range(0, self.aantalRondes()):
+            yield data[i+1][FIELDNAMES.index('Ronde')]
+            
 
     
 #==============================DIT ZIJN INTERNE FUNCTIES ============================================
@@ -236,8 +266,9 @@ class Class_Rondes():
         os.rename('tmp.csv', RONDEINFO)
             
     def autoUpdate(self):
-        self.sorteerRondenummer()
-        with open(RONDEINFO, 'rt') as fr, open('tmp.csv', 'w+') as fw:
+        #self.sorteerRondenummer()
+        tmp = 'tmp.csv'
+        with open(RONDEINFO, 'rt') as fr, open(tmp, 'w+') as fw:
             reader = csv.DictReader(fr, delimiter=',')
             writer = csv.DictWriter(fw, FIELDNAMES)
             writer.writeheader()
@@ -249,8 +280,8 @@ class Class_Rondes():
                     toWrite[name] = row[name]
                 toWrite['RN'] = RN
                 writer.writerow(toWrite)
-                
-        os.rename('tmp.csv', RONDEINFO)
+        
+        os.rename(tmp, RONDEINFO)
 
     
 #=================================================================================================

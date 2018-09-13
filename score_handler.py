@@ -81,6 +81,16 @@ class Class_Scores():
         writer.writerow(row)
         del writer
 
+    def clearImagesDir(self):
+        files = os.listdir(IMAGESDIR)
+        for filename in files:
+            os.remove(filename)
+
+    def clearScoresDir(self):
+        files = os.listdir(RONDEFILES)
+        for filename in files:
+            os.remove(filename)
+
     def cleanScanRaw(self):
         tmp = RONDEFILES + 'tmp.csv'
         with open(RONDEFILES+SCANCONTROL, 'rt') as fr, open(RONDEFILES+SCANRAW, 'rt') as fr2, open(tmp, 'w') as fw:

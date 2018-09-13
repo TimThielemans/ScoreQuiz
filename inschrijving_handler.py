@@ -12,16 +12,16 @@ def read_Settings():
         config.read('settings.ini')
 
         global PLOEGINFO
-        global RONDEINFO
         global STRUCTBETALING
         global INSCHRIJVINGSGELD
         global DRANKKAARTGELD
         global PLOEGGENERAL
         global QUIZFOLDER
+        global HEADERSPATH
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         
         PLOEGINFO = QUIZFOLDER + config.get('PATHS', 'PLOEGINFO')
-        RONDEINFO = QUIZFOLDER + config.get('PATHS', 'RONDEINFO')        
+        HEADERSPATH = QUIZFOLDER + config.get('PATHS', 'HEADERS')   
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
 
         STRUCTBETALING = config.get('COMMON', 'STRUCTBETALING')
@@ -31,6 +31,13 @@ def read_Settings():
         global FIELDNAMES
         f = csv.reader(open(PLOEGINFO, 'rt'), delimiter = ',')
         FIELDNAMES = next(f)
+        del f
+
+        global DEFHEADERS
+        f = csv.reader(open(HEADERSPATH, 'rt'), delimiter = ',')
+        DEFHEADERS = next(f)
+        del f
+        
         
 
     except Exception as error_msg:
@@ -42,13 +49,17 @@ class Class_Inschrijvingen():
 
     def __init__(self):
         read_Settings()
+        from ronde_handler import Class_Rondes
+        self.RH = Class_Rondes()
         
     def nieuwePloeg(self, ploegdata):
         dubbelenaam = self.getRowIndex(ploegdata[0])
         if dubbelenaam == 0:
             #De ploegnaam is uniek dus geldige inschrijving
-            if '@' in ploegdata[3]:
+            if '@' in ploegdata[3] and '.' in ploegdata[3]:
                 self.addToGlobalDocument('1', ploegdata[1], ploegdata[3])
+            else:
+                ploegdata[3] = ''
             numbers = self.aantalPloegen()
             TN = numbers[1]+1
             IN = numbers[2]+1
@@ -74,7 +85,8 @@ class Class_Inschrijvingen():
                 writer = csv.writer(fw)
                 writer.writerows(data[0:X])
                 writer.writerows(data[X+1:])
-            self.addToGlobalDocument('x', data[X][FIELDNAMES.index('Voornaam')], ploegdata[X][FIELDNAMES.index('Email')])
+            if '@' in data[X][FIELDNAMES.index('Email')]:
+                self.addToGlobalDocument('x', data[X][FIELDNAMES.index('Voornaam')], data[X][FIELDNAMES.index('Email')])
             self.autoUpdate()
         else:
             #Deze ploeg is niet gevonden
@@ -96,27 +108,27 @@ class Class_Inschrijvingen():
             Y = FIELDNAMES.index('Aangemeld')
             data = self.getData()
             vorig = int(data[X][Y])
-            result['TN'] = data[X][FIELDNAMES.index('TN')]
-            result['Uur'] = data[X][FIELDNAMES.index('Uur')]
-            result['Email'] = data[X][FIELDNAMES.index('Email')]
-            result['Betaald'] = data[X][FIELDNAMES.index('Betaald')]
-            result['Bedrag'] = data[X][FIELDNAMES.index('Bedrag')]
             if vorig == 0:
                 data[X][Y] = '1'
                 data[X][FIELDNAMES.index('Uur')] = time.strftime('%H:%M:%S')
                 with open(PLOEGINFO, 'w') as fw:
                     writer = csv.writer(fw)
                     writer.writerows(data)
-                stringResult = 'Ploegnaam: {}\n'.format(data[X][FIELDNAMES.index('Ploegnaam')])
+            result['TN'] = data[X][FIELDNAMES.index('TN')]
+            result['Uur'] = data[X][FIELDNAMES.index('Uur')]
+            result['Betaald'] = int(data[X][FIELDNAMES.index('Betaald')])
+            result['Bedrag'] = int(data[X][FIELDNAMES.index('Bedrag')])
+
+            if result['Betaald'] == 1:
+                drankkaarten = (result['Betaald']-INSCHRIJVINGSGELD)/DRANKKAARTGELD
             else:
-                stringResult = stringResult + 'Er heeft zich al iemand van {} aangemeld om {}.\n \n'.format(str(data[X][FIELDNAMES.index('Ploegnaam')]).upper(), data[X][FIELDNAMES.index('Uur')])
-
-            stringResult = stringResult + 'Tafelnummer: {} \n'.format(result['TN'])
-
-            if not '@' in result['Email']:
-                stringResult = stringResult + '\nEMAILADRES TOEVOEGEN!!!'
+                drankkaarten = 0
             
-        return stringResult
+            result['Email'] = '@' in data[X][FIELDNAMES.index('Email')]
+            result['Aanwezig'] = not bool(vorig) #was er al iemand aanwezig van die ploeg?
+            result['Drankkaarten'] = drankkaarten
+
+        return result
             
 
     def resetAanmelding(self, ploeg):
@@ -152,15 +164,37 @@ class Class_Inschrijvingen():
             writer = csv.writer(fw)
             writer.writerows(data)
 
-    def veranderPloegnaam(self, oud, nieuw):
+    def resetBetalingen(self):
+        data = self.getData()
+        Yindex = []
+        Yindex.append(FIELDNAMES.index('Betaald'))
+        Yindex.append(FIELDNAMES.index('Bedrag'))
+        for X in range(1, len(data)):
+            for Y in Yindex:
+                data[X][Y] = '0'
+        with open(PLOEGINFO, 'w') as fw:
+            writer = csv.writer(fw)
+            writer.writerows(data)
+
+    def updatePloegInfo(self, oud, ploeginfo):
         X = self.getRowIndex(oud)
         if X>0:
             Y = FIELDNAMES.index('Ploegnaam')
             data = self.getData()
-            data[X][Y] = nieuw
+            data[X][FIELDNAMES.index('Ploegnaam')] = ploeginfo[0]
+            data[X][FIELDNAMES.index('Voornaam')] = ploeginfo[1]
+            data[X][FIELDNAMES.index('Achternaam')] = ploeginfo[2]
+            update = False
+            if not str(data[X][FIELDNAMES.index('Email')]).lower() == str(ploeginfo[3]).lower():
+                update = True
+            data[X][FIELDNAMES.index('Email')] = ploeginfo[3]
+            
             with open(PLOEGINFO, 'w') as fw:
                 writer = csv.writer(fw)
                 writer.writerows(data)
+
+            if update:
+                self.addToGlobalDocument('1', data[X][FIELDNAMES.index('Voornaam')], data[X][FIELDNAMES.index('Email')])
             return True
         return False
 
@@ -211,18 +245,28 @@ class Class_Inschrijvingen():
         except NameError:
             raise
 
-    def setBetaling(self, ploeg, bedrag):
-        try:
-            X = self.getRowIndex(ploeg)
-            data = self.getData()
-            data[X][FIELDNAMES.index('Bedrag')] = bedrag
-            if int(bedrag)>=20:
-                data[X][FIELDNAMES.index('Betaald')] = 1
-            with open(PLOEGINFO, 'w') as fw:
-                writer = csv.writer(fw)
-                writer.writerows(data)
-        except NameError:
-            raise
+    def setBetaling(self, mededeling, bedrag):
+        if len(mededeling)>10:
+            X = getRowIndexBetaling(mededeling)
+            if X>0:
+                Y=FIELDNAMES.index('Bedrag')
+                data = self.getData()
+                data[X][Y] = bedrag + data[X][Y]
+                if  data[X][Y]>=INSCHRIJVINGSGELD:
+                    data[X][Y] = 1
+                with open(PLOEGINFO, 'w') as fw:
+                    writer = csv.writer(fw)
+                    writer.writerows(data)
+
+    def setBetalingen(self, file):
+        self.resetBetalingen()
+        with open(file, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for index, row in enumerate(reader):
+                messageStruct = row['gestructureerde mededeling']
+                messageFree = row['Vrije mededeling']
+                bedrag = row['credit']
+                self.setBetaling(messageStruct, bedrag)
 
 #========================================GETTERS====================================================
 
@@ -272,6 +316,15 @@ class Class_Inschrijvingen():
         except NameError:
             raise
 
+    def getPloegInfo(self, ploeg):
+        try:
+            X = self.getRowIndex(ploeg)
+            data = self.getData()
+            return data[X]
+        except NameError:
+            raise
+
+
     def getPloegen(self):
         data = self.getData()
         aantal = self.aantalPloegen()
@@ -287,46 +340,52 @@ class Class_Inschrijvingen():
 #==============================DIT ZIJN INTERNE FUNCTIES ============================================
 
     def addToGlobalDocument(self,number, voornaam, email):
-        tmp = 'tmp.csv'
-        with open(PLOEGGENERAL, 'rt') as fr, open(tmp, 'w') as fw:
-            reader = csv.reader(fr)
-            writer = csv.writer(fw)
-            headers = next(reader)
-            writer.writerow(headers)
-            new = True
-            for index, row in enumerate(reader):
-                if str(row[1]).lower() == str(email).lower():
-                    newRow = []
-                    if len(row)==len(headers):
-                        newRow = [voornaam] + row[1:(len(row)-1)] + [number]
+        if not 'Test' in QUIZFOLDER:
+            tmp = 'tmp.csv'
+            with open(PLOEGGENERAL, 'rt') as fr, open(tmp, 'w') as fw:
+                reader = csv.reader(fr)
+                writer = csv.writer(fw)
+                headers = next(reader)
+                writer.writerow(headers)
+                new = True
+                for index, row in enumerate(reader):
+                    if str(row[1]).lower() == str(email).lower():
+                        newRow = []
+                        if len(row)==len(headers):
+                            newRow = [voornaam] + row[1:(len(row)-1)] + [number]
+                        else:
+                            extra = [0]*(len(headers)-len(row)-1)
+                            newRow = [voornaam] + row[1:] + extra + [number]
+                        writer.writerow(newRow)
+                        new = False
+                        print('GEVONDEN:', index, row[1])
                     else:
-                        extra = [0]*(len(headers)-len(row)-1)
-                        newRow = [voornaam] + row[1:] + extra + [number]
-                    writer.writerow(newRow)
-                    new = False
-                    print('GEVONDEN:', index, row[1])
-                else:
-                    if len(row)<len(headers):
-                        row = row + [0]*(len(headers)-len(row))
-                    writer.writerow(row)
-            if new:
-                extra = [0]*(len(headers)-3)
-                nieuweRij = [voornaam] +  [email] + extra + [number]
-                writer.writerow(nieuweRij)
-                print('Nieuwe ploeg:', voornaam, email)
+                        if len(row)<len(headers):
+                            row = row + [0]*(len(headers)-len(row))
+                        writer.writerow(row)
+                if new:
+                    extra = [0]*(len(headers)-3)
+                    nieuweRij = [voornaam] +  [email] + extra + [number]
+                    writer.writerow(nieuweRij)
+                    print('Nieuwe ploeg:', voornaam, email)
 
-        #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
-        shutil.move(tmp, PLOEGGENERAL)
+            #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
+            shutil.move(tmp, PLOEGGENERAL)
+        else:
+            print('Testmodus dus niets toevoegd aan {}'.format(PLOEGGENERAL))   
                                 
-    def sorteerPLOEGGENERAL(self):
+    def sorteerPloegGeneral(self):
         #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
-        with open(tmp, 'rt') as fr, open(PLOEGGENERAL, 'w+') as fw:
+        tmp = 'tmp.csv'
+        with open(PLOEGGENERAL, 'rt') as fr, open(tmp, 'w+') as fw:
             writer = csv.writer(fw)
             reader = csv.reader(fr)
             writer.writerow(next(reader)) #header
             sorted2 = sorted(reader, key = lambda row: (int(row[1]))) #'sorteer op emailadres
             for count, row in enumerate(sorted2):
                 writer.writerow(row)
+
+        shutil.move(tmp, PLOEGGENERAL)
     
     def getData(self):
         with open(PLOEGINFO, 'rt') as fr:
@@ -338,6 +397,13 @@ class Class_Inschrijvingen():
             if unicodedata.normalize('NFKD', row['Ploegnaam']).encode('ASCII', 'ignore') == unicodedata.normalize('NFKD', str(searchValue)).encode('ASCII', 'ignore'):
                 return index+1
             elif row['TN'] == str(searchValue):
+                return index+1
+        return 0
+
+    def getRowIndexBetaling(self, mededeling):
+        reader = csv.DictReader(open(PLOEGINFO, 'rt'))
+        for index, row in enumerate(reader):
+            if row['Mededeling'] == mededeling:
                 return index+1
         return 0
 
@@ -353,17 +419,19 @@ class Class_Inschrijvingen():
         os.rename('tmp.csv', PLOEGINFO)
             
     def autoUpdate(self):
-        if not '0' in FIELDNAMES:
-            FIELDNAMES.append('0')
-            with open(RONDEINFO, 'rt') as f:
-                rondes = csv.DictReader(f, delimiter=',')
-                for index, row in enumerate(rondes):
-                    if not row['RN'] in FIELDNAMES:
-                        FIELDNAMES.append(row['RN'])
+        global FIELDNAMES
+        if len(DEFHEADERS) + self.RH.aantalRondes() + 1 > len(FIELDNAMES):
+            FIELDNAMES = DEFHEADERS
+            if not 'O' in FIELDNAMES:
+                FIELDNAMES.append('O')
+            for index, row in enumerate(self.RH.getRondes()):
+                if not row[0] in FIELDNAMES:
+                    FIELDNAMES.append(row[0])
 
         self.sorteerTafelnummer()
 
-        with open(PLOEGINFO, 'rt') as fr, open('tmp.csv', 'w+') as fw:
+        tmp = 'tmp.csv'
+        with open(PLOEGINFO, 'rt') as fr, open(tmp, 'w+') as fw:
             reader = csv.DictReader(fr, delimiter=',')
             writer = csv.DictWriter(fw, FIELDNAMES)
             writer.writeheader()
@@ -384,7 +452,7 @@ class Class_Inschrijvingen():
                 toWrite['TN'] = TN
                 writer.writerow(toWrite)
                 
-        os.rename('tmp.csv', PLOEGINFO)
+        os.rename(tmp, PLOEGINFO)
 
     
 #=================================================================================================
