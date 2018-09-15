@@ -8,13 +8,27 @@ class Inschrijving(QtWidgets.QDialog):
         self.setWindowTitle('Nieuwe Ploeg')
         self.show()
 
+
         from inschrijving_handler import Class_Inschrijvingen
+        from email_handler import Class_Emails
+        
+        self.EH = Class_Emails()
         self.PH = Class_Inschrijvingen()
+        
         self.InschrijvenBtn.clicked.connect(self.inschrijving)
             
+    def keyPressEvent(self, event):
+        if type(event)==QtGui.QKeyEvent:
+           # print ("type(event) = ",type(event), 'Event Key=', event.key())
+            if event.key()==QtCore.Qt.Key_Return or event.key()==QtCore.Qt.Key_Enter:
+                self.inschrijving()
+            elif event.key()==QtCore.Qt.Key_Escape:
+                self.close()
+            event.accept()
+        else:
+            event.ignore()
+            
     def inschrijving(self):
-        
-        import email_sender
         ploegnaam = self.PloegnaamTxt.toPlainText()
         voornaam = self.VoornaamTxt.toPlainText()
         achternaam = self.AchternaamTxt.toPlainText()
@@ -26,7 +40,7 @@ class Inschrijving(QtWidgets.QDialog):
                 qm = QtWidgets.QMessageBox()
                 answer = qm.question(QtWidgets.QDialog(), 'Email verzenden?', 'Bevestigingsmail verzenden naar {}'.format(email), qm.Yes | qm.No)
                 if answer == qm.Yes:
-                    email_sender.bevestigingInschrijving(subscription)
+                    self.EH.bevestigingInschrijving(subscription)
             self.PloegnaamTxt.setText('')
             self.VoornaamTxt.setText('')
             self.AchternaamTxt.setText('')

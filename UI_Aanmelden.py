@@ -30,23 +30,38 @@ class Aanmelden(QtWidgets.QDialog):
             event.accept()
         else:
             event.ignore()
-        
+    
     def aanmelding(self):
         ploegnaam = self.ploegnaamTxt.currentText()
         index = self.ploegnaamTxt.currentIndex()
         if not ploegnaam == ' ' and index>-1:
-            aanmeldtekst = self.PH.aanmelden(ploegnaam)
-            if 'Er heeft zich al iemand' in aanmeldtekst:
-                qm = QtWidgets.QMessageBox()
-                answer = qm.question(QtWidgets.QDialog(), 'Terug afmelden?', aanmeldtekst +'\n\nTerug Afmelden?', qm.Yes | qm.No)
-                if answer == qm.Yes:
-                    self.PH.resetAanmelding(ploegnaam)
+            aanmeldResult = self.PH.aanmelden(ploegnaam)
+            if len(aanmeldResult)>1:
+                tekst = "<p align='center'>Tafelnummer: {}</p>".format(aanmeldResult['TN'])
+                if aanmeldResult['Aanwezig']:
+                    tekst = tekst +  "<p align='left'> Vorige aanmelding: {}<br>" .format(aanmeldResult['Uur'])
+                    tekst = tekst + 'Terug afmelden?</p>'                    
+                    qm = QtWidgets.QMessageBox()
+                    answer = qm.question(QtWidgets.QDialog(), 'Terug afmelden?', tekst, qm.Yes | qm.No)
+                    if answer == qm.Yes:
+                        self.PH.resetAanmelding(ploegnaam)
+                else:
+                    if bool(aanmeldResult['Betaald']):
+                        tekst = tekst + "<p align='left'> Betaling in orde<br>" + "Drankkaarten: {}<br>".format(aanmeldResult['Drankkaarten'])
+                    else:
+                        tekst = tekst + "<p align='left'> NOG NIET BETAALD!!!<br>"
+
+                    if not aanmeldResult['Email']:
+                        tekst = tekst + "EMAILADRES TOEVOEGEN!!!</p>"
+                        self.msgBox(tekst, 'Aanmelding')
+                        email, ok = QtWidgets.QInputDialog.getText(self, 'Emailadres', 'Emailadres voor ploeg {}'.format(ploegnaam));
+                        if '@' in email and ok:
+                            self.PH.veranderEmail(ploegnaam, email)
+                    else:
+                        self.msgBox(tekst + '</p>', 'Aanmelding')
             else:
-                self.msgBox(aanmeldtekst, 'Aanmelding')
-            if 'EMAILADRES' in aanmeldtekst:
-                email, ok = QtWidgets.QInputDialog.getText(self, 'Emailadres', 'Emailadres voor ploeg {}'.format(ploegnaam));
-                if '@' in email and ok:
-                    self.PH.veranderEmail(ploegnaam, email)
+                self.msgBox('Ploeg niet gevonden', 'Ongeldig')
+                    
         self.ploegnaamTxt.setCurrentIndex(-1)
         self.ploegnaamTxt.setFocus()
 

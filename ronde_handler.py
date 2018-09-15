@@ -30,8 +30,10 @@ def read_Settings():
 #=====================================================================================
 
 
-
 class Class_Rondes():
+
+    def __init__(self):
+        read_Settings()
     
     def nieuweRonde(self, rondeData):
         RN = self.aantalRondes()+1
@@ -282,10 +284,5 @@ class Class_Rondes():
                 writer.writerow(toWrite)
         
         os.rename(tmp, RONDEINFO)
-
-    
-#=================================================================================================
-
-read_Settings()
 
 

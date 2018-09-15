@@ -49,6 +49,7 @@ class Class_Inschrijvingen():
 
     def __init__(self):
         read_Settings()
+
         from ronde_handler import Class_Rondes
         self.RH = Class_Rondes()
         
@@ -63,7 +64,7 @@ class Class_Inschrijvingen():
             numbers = self.aantalPloegen()
             TN = numbers[1]+1
             IN = numbers[2]+1
-            struct = STRUCTBETALING + str(IN).zfill(2)
+            struct = STRUCTBETALING + str(IN).zfill(3)
             modulo = int(struct.replace('/', ''))%97
             if modulo == 0:
                 modulo = 97
@@ -93,10 +94,9 @@ class Class_Inschrijvingen():
             raise NameError('Not Found')
 
     def verwijderAllePloegen(self):
-        data = self.getData()
         with open(PLOEGINFO, 'wt') as fw:
             writer = csv.writer(fw)
-            writer.writerow(data[0])
+            writer.writerow(DEFHEADERS)
 
     def aanmelden(self, ploeg):
         #Return: Tafelnummer en eventueel het uur waarop er al iemand had aangemeld, indien [] bestaat de ploeg niet
@@ -125,7 +125,7 @@ class Class_Inschrijvingen():
                 drankkaarten = 0
             
             result['Email'] = '@' in data[X][FIELDNAMES.index('Email')]
-            result['Aanwezig'] = not bool(vorig) #was er al iemand aanwezig van die ploeg?
+            result['Aanwezig'] = bool(vorig) #was er al iemand aanwezig van die ploeg?
             result['Drankkaarten'] = drankkaarten
 
         return result
@@ -324,12 +324,17 @@ class Class_Inschrijvingen():
         except NameError:
             raise
 
-
     def getPloegen(self):
         data = self.getData()
         aantal = self.aantalPloegen()
         for i in range(0, aantal[1]):
             yield data[i+1]
+
+    def getPloegenDict(self):
+        with open(PLOEGINFO, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for i, row in enumerate(reader):
+                yield row
 
     def getPloegNamen(self):
         data = self.getData()
@@ -420,7 +425,7 @@ class Class_Inschrijvingen():
             
     def autoUpdate(self):
         global FIELDNAMES
-        if len(DEFHEADERS) + self.RH.aantalRondes() + 1 > len(FIELDNAMES):
+        if not (len(DEFHEADERS) + self.RH.aantalRondes() + 1) == len(FIELDNAMES):
             FIELDNAMES = DEFHEADERS
             if not 'O' in FIELDNAMES:
                 FIELDNAMES.append('O')

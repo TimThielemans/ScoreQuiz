@@ -5,20 +5,10 @@ import random
 import shutil
 import itertools
 import configparser, inspect, os
-from ronde_handler import Class_Rondes
-from inschrijving_handler import Class_Inschrijvingen
+
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
 def read_Settings():
-
-    global RH
-    global PH
-    
-
-    RH = Class_Rondes()
-    PH = Class_Inschrijvingen()
-    SUPERNR = RH.numberSuperRonde()
-    
     try:
         config = configparser.ConfigParser()
         config.read('settings.ini')
@@ -53,11 +43,22 @@ def read_Settings():
 
 class Class_Scores():
 
+    def __init__(self):
+        read_Settings()
+
+        from ronde_handler import Class_Rondes
+        from inschrijving_handler import Class_Inschrijvingen
+        self.RH = Class_Rondes()
+        self.PH = Class_Inschrijvingen()
+
+        global SUPERNR
+        SUPERNR = self.RH.numberSuperRonde()
+
     def getScore(self, ronde, ploeg, scanner=0):
         if scanner==1:
             filename = RONDEFILES + SCANRAW
         else:
-            filename = RONDEFILES + USERPREFIX + RH.getRondenaam(ronde) + '.csv'
+            filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
         with open(filename, 'rt') as fr:
             reader = csv.reader(fr)
             for i, row in enumerate(reader):
@@ -84,12 +85,12 @@ class Class_Scores():
     def clearImagesDir(self):
         files = os.listdir(IMAGESDIR)
         for filename in files:
-            os.remove(filename)
+            os.remove(IMAGESDIR + '/' + filename)
 
     def clearScoresDir(self):
         files = os.listdir(RONDEFILES)
         for filename in files:
-            os.remove(filename)
+            os.remove(RONDEFILES + '/' + filename)
 
     def cleanScanRaw(self):
         tmp = RONDEFILES + 'tmp.csv'
@@ -115,7 +116,7 @@ class Class_Scores():
         if scanner==1:
             filename = RONDEFILES + SCANRAW
         else:
-            filename = RONDEFILES + USERPREFIX + RH.getRondenaam(ronde) + '.csv'
+            filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
         with open(filename, 'rt') as fr, open(tmp, 'w') as fw:
             writer = csv.writer(fw)
             reader = csv.reader(fr)
@@ -129,7 +130,7 @@ class Class_Scores():
 
     def insertScore(self, ronde, ploeg, score, prefix):
         tmp = RONDEFILES + 'tmp.csv'
-        filename = RONDEFILES + prefix + RH.getRondenaam(ronde) + '.csv'
+        filename = RONDEFILES + prefix + self.RH.getRondenaam(ronde) + '.csv'
         with open(filename, 'rt') as fr, open(tmp, 'w') as fw:
             writer = csv.writer(fw)
             reader = csv.reader(fr)
@@ -144,7 +145,7 @@ class Class_Scores():
 
     def deleteScore(self, ronde, ploeg, prefix):
         tmp = RONDEFILES + 'tmp.csv'
-        filename = RONDEFILES + prefix + RH.getRondenaam(ronde) + '.csv'
+        filename = RONDEFILES + prefix + self.RH.getRondenaam(ronde) + '.csv'
         with open(filename, 'rt') as fr, open(tmp, 'w') as fw:
             writer = csv.writer(fw)
             reader = csv.reader(fr)
@@ -179,7 +180,7 @@ class Class_Scores():
                         #nieuweronde dus nieuwe file opendoen!
                         del writer
                         self.sorteerVerwijderDubbels(filename)
-                        rondeNaam = RH.getRondenaam(ronde)
+                        rondeNaam = self.RH.getRondenaam(ronde)
                         nieuw = not any(fname.endswith(rondeNaam + '.csv') for fname in os.listdir(RONDEFILES))
                         filename = RONDEFILES + USERPREFIX + rondeNaam + '.csv'
                         writer = csv.writer(open(filename, 'a'))
@@ -194,9 +195,9 @@ class Class_Scores():
                     else:
                         #schifting en bonus
                         if len(score)>1:
-                            PH.setSchiftingBonus(ploeg, score[0], score[1])
+                            self.PH.setSchiftingBonus(ploeg, score[0], score[1])
                         else:
-                            PH.setSchiftingBonus(ploeg, score[0])
+                            self.PH.setSchiftingBonus(ploeg, score[0])
                     currentRound = ronde
                 del writer
                 self.sorteerVerwijderDubbels(filename)
@@ -232,7 +233,7 @@ class Class_Scores():
 
 
     def checkAanwezigheden(self):
-        nummers, _, _ = PH.aanwezigePloegen()
+        nummers, _, _ = self.PH.aanwezigePloegen()
         ontbrekendeBestanden = []
         nietAanwezigeInvoer = []
         filenames = os.listdir(RONDEFILES)
@@ -252,7 +253,7 @@ class Class_Scores():
                                 pass
                         for i in nummers:
                             ontbrekendeBestanden.append('{}_{}'.format(ronde,i))
-                        nummers, _, _ = PH.aanwezigePloegen()
+                        nummers, _, _ = self.PH.aanwezigePloegen()
 
         
         #Verwijder de (foutieve) entry van ploegen die niet aanwezig zijn!
@@ -262,7 +263,7 @@ class Class_Scores():
         #Voeg 0 toe bij de ontbrekende bestanden!
         for bestand in ontbrekendeBestanden:
             ronde = list(map(int,bestand.split('_')))
-            NOQ, SUPER = RH.getVragenSuper(ronde[0])
+            NOQ, SUPER = self.RH.getVragenSuper(ronde[0])
             self.insertScore(ronde[0], ronde[1], [0]*NOQ*(1+2*SUPER), FINALPREFIX)
             
         return ontbrekendeBestanden, nietAanwezigeInvoer
@@ -291,12 +292,12 @@ class Class_Scores():
                     for row in reader:
                         ronde = int(row[0])
                         if not currentRound == ronde:
-                            bonusRonde = RH.isBonusRonde(ronde)
+                            bonusRonde = self.RH.isBonusRonde(ronde)
                             if bonusRonde == 1:
                                 header.append('Bonus')
                             writer.writerow(header)
                         if bonusRonde == 1:
-                            schifting, bonus = PH.getSchiftingBonus(int(row[1]))
+                            schifting, bonus = self.PH.getSchiftingBonus(int(row[1]))
                             if bonus>0:
                                 row.append(row[bonus+3])
                             else:
@@ -322,10 +323,3 @@ class Class_Scores():
                 writer.writerow(row)
         os.rename(tmp, filename)
         
-   
-read_Settings()
-##for i, a in enumerate(getScanResults()):
-##    if not i == 3:
-##       validateScanResult(a[0])
-##fromScannerToUser()
-##makeFinal()

@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt
 import configparser
 import os, parser
 import sys
+
 sys.path.append('code/')
 import UI_Inschrijvingen
 import UI_ScanControl
@@ -32,9 +33,7 @@ class startScherm(QtWidgets.QMainWindow):
 
         import decodeSheets
         import generateScorebord
-        import email_sender
         
-
     def selectDir(self):
         filename = 'settings.ini'
         parser = configparser.ConfigParser()
@@ -121,7 +120,7 @@ class startScherm(QtWidgets.QMainWindow):
     def admin(self):
         wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
         if ok and wachtwoord == WACHTWOORD:
-            UI_Admin.Admin(self)
+            UI_Admin.AdminUI(self)
         
 
             

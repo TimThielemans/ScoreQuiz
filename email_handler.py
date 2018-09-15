@@ -1,98 +1,188 @@
 
-import configparser, inspect, os
-import smtplib
-from email.mime.multipart import MIMEMultipart, MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
 
+import configparser, inspect, os
+
+import csv
+import pyqrcode
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
-def read_Email_Settings():
+def read_Settings():
     try:
         config = configparser.ConfigParser()
         # config.optionxform=str   #By default config returns keys from Settings file in lower case. This line preserves the case for key
         config.read('settings.ini')
 
+        global EMAILINSCHRIJVING
+        global EMAILBETALINGSVRAAG
+        global EMAILHERINNERING
+        global EMAILEINDSTAND
+        global PLOEGGENERAL
+        global UITNODIGINGSCR
+        global UITNODIGINGBOW
+        global UITNODIGINGKWISTET
+        global UITNODIGINGLIEFHEBBER
+        global UITNODIGINGFAN
+        global UITNODIGINGHERINNERING
+        global QUIZFOLDER
+        global QRCODES
+        global INSCHRIJVINGSGELD
+        global DRANKKAART
+        global REKENINGNUMMER
 
-        global FROM_ADD
-        global USERNAME
-        global PASSWORD
-        global SMTP_SERVER
-        global SMTP_PORT
+        QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         
-        SMTP_SERVER = config.get("EMAIL","SMTP_ADD")
-        SMTP_PORT = config.get("EMAIL","SMTP_PORT")
-        FROM_ADD = config.get("EMAIL","FROM_ADD")
-        USERNAME = config.get("EMAIL","USERNAME")
-        PASSWORD = config.get("EMAIL","PASSWORD")
+        EMAILINSCHRIJVING = QUIZFOLDER + config.get('EMAIL', 'INSCHRIJVING')
+        EMAILBETALINGSVRAAG = QUIZFOLDER + config.get('EMAIL', 'BETALING')
+        EMAILHERINNERING = QUIZFOLDER + config.get('EMAIL', 'HERINNERING')
+        EMAILEINDSTAND = QUIZFOLDER + config.get('EMAIL', 'EINDSTAND')
+        QRCODES = QUIZFOLDER + config.get('PATHS', 'QRCODES')
+        PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
 
+        UITNODIGINGSCR  = QUIZFOLDER + config.get('EMAIL', 'SCR')
+        UITNODIGINGBOW  = QUIZFOLDER + config.get('EMAIL', 'BOW')
+        UITNODIGINGKWISTET  = QUIZFOLDER + config.get('EMAIL', 'KWISTET')
+        UITNODIGINGLIEFHEBBER  = QUIZFOLDER + config.get('EMAIL', 'LIEFHEBBER')
+        UITNODIGINGFAN  = QUIZFOLDER +  config.get('EMAIL', 'FAN')
+        UITNODIGINGHERINNERING = QUIZFOLDER + config.get('EMAIL', 'UITNODIGINGREMINDER')
+
+        INSCHRIJVINGSGELD = config.get('COMMON', 'INSCHRIJVINGSGELD')
+        DRANKKAART = config.get('COMMON', 'DRANKKAARTGELD')
+        REKENINGNUMMER = config.get('COMMON', 'REKENINGNUMMER')
+
+        
     except Exception as error_msg:
-        print("Error while trying to read SMTP/EMAIL Settings.")
+        print("Error while trying to read Settings.")
         print({"Error" : str(error_msg)})
 #=====================================================================================
 
-read_Email_Settings()
+class Class_Emails():
 
-class Class_eMail():
-    
     def __init__(self):
-        self.session = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        self.session.ehlo()
-        self.session.login(USERNAME, PASSWORD)
+        read_Settings()
+        from email_sender import Class_EmailSender
+        from inschrijving_handler import Class_Inschrijvingen
 
+        self.EH = Class_EmailSender()
+        self.PH = Class_Inschrijvingen()
+
+    def bevestigingInschrijving(self, ploeginfo):
+        template = open(EMAILINSCHRIJVING).read()
+        text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
+        to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
+        self.EH.send_HTML_Mail(to_email, 'Bevestiging Inschrijving 6e Q@C Sinterklaasquiz', text)
+
+    def sendBetalingQR(self, ploeginfo):
+        ploegnaam = ploeginfo['Ploegnaam']
+        mededeling = ploeginfo['Mededeling']
+        email = 'tim.thielemans@gmail.com' #ploeginfo['Email']
+        onderwerp = 'Betaling en QRcode 6e Q@C Sinterklaasquiz'
+        filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        template = open(EMAILBETALINGSVRAAG).read()
+        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         
-    def initialise_Mail_Body(self, To_Add, Subject):
-        #Prepare Mail Body
-        Mail_Body = MIMEMultipart()
-        Mail_Body['From'] = FROM_ADD
-        Mail_Body['To'] = To_Add
-        Mail_Body['Subject'] = Subject
-        return Mail_Body
-    
-    
-    #Call this to send plain text emails.
-    def send_Text_Mail(self, To_Add, Subject, txtMessage):
-        Mail_Body = self.initialise_Mail_Body(To_Add, Subject)
-        #Attach Mail Message
-        Mail_Msg = MIMEText(txtMessage, 'plain')
-        Mail_Body.attach(Mail_Msg)
-        #Send Mail
-        self.session.sendmail(FROM_ADD, [To_Add], Mail_Body.as_string())
-    
-    
-    #Call this to send HTML emails.
-    def send_HTML_Mail(self, To_Add, Subject, htmlMessage):
-        Mail_Body = self.initialise_Mail_Body(To_Add, Subject)
-        #Attach Mail Message
-        Mail_Msg = MIMEText(htmlMessage, 'html')
-        Mail_Body.attach(Mail_Msg)
-        #Send Mail
-        self.session.sendmail(FROM_ADD, [To_Add], Mail_Body.as_string())
-        
+    def sendUitnodigingen(self, minimum):
+        SCRindex = []
+        BOWindex = []
+        Kwistetindex = []
+        with open(PLOEGGENERAL, 'rt') as fr:
+            reader = csv.reader(fr)
+            header = next(reader)
+            for index, name in enumerate(header):
+                if 'SCR' in name:
+                    SCRindex.append(index)
+                elif 'BOW' in name:
+                    BOWindex.append(index)
+                elif 'Kwistet' in name:
+                    Kwistetindex.append(index)
+            
+            for index, row in enumerate(reader):
+                SCRsum = 0
+                BOWsum = 0
+                Kwistetsum = 0
+                for i in SCRindex:
+                    if not row[i] == 'x':
+                        SCRsum = SCRsum + int(row[i])
+                for i in BOWindex:
+                    if not row[i] == 'x':
+                        BOWsum = BOWsum + int(row[i])
+                for i in Kwistetindex:
+                    if not row[i] == 'x':
+                        Kwistetsum = Kwistetsum + int(row[i])
 
-    def send_HTML_Attachment_Mail(self, To_Add, Subject, htmlMessage, path, filename):
-        Mail_Body = self.initialise_Mail_Body(To_Add, Subject)
-        #Attach Mail Message
-        Mail_Msg = MIMEText(htmlMessage, 'html')
+                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor SCR
+                if not int(row[SCRindex[len(SCRindex)-1]]) == 1 and index>int(minimum):
+                    if SCRsum+Kwistetsum+BOWsum>6:
+                        template = open(UITNODIGINGFAN).read()
+                    elif SCRsum>0:
+                        template = open(UITNODIGINGSCR).read()
+                    elif Kwistetsum > 0:
+                        template = open(UITNODIGINGKWISTET).read()
+                    elif BOWsum>0:
+                        template = open(UITNODIGINGBOW).read()
+                    else:
+                        #quizliefhebber, ooit ingeschreven maar terug uitgeschreven ook
+                        template = open(UITNODIGINGLIEFHEBBER).read()
 
-        attachment = open(path, "rb")         
-        Mail_Attachment = MIMEBase('application', 'octet-stream')
-        Mail_Attachment.set_payload((attachment).read())
-        encoders.encode_base64(Mail_Attachment)
-        Mail_Attachment.add_header('Content-Disposition', "attachment; filename= %s" % filename)
-                
-        
-        Mail_Body.attach(Mail_Msg)
-        Mail_Body.attach(Mail_Attachment)
-        #Send Mail
-        self.session.sendmail(FROM_ADD, [To_Add], Mail_Body.as_string())
+                    try:
+                        text = template.format(VOORNAAM=row[0])
+                    except KeyError:
+                        text = template.format(VOORNAAM=row[0], DEELNAMES = SCRsum+Kwistetsum+BOWsum)
+                        pass
 
-        
-    def __del__(self):
-        self.session.close()
-        del self.session
+                        onderwerp = 'Uitnodiging 6e Q@C Sinterklaasquiz Rotselaar 07/12/2018'
+                        adres = row[1]
+                       # self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        print(index, adres)
+                    else:
+                        print(index, row[1], 'is al ingeschreven of kreeg al een mail')
+                print('Alles is verstuurd')
 
+    def sendUitnodigingenReminder(self, minimum):
+        SCRindex = []
+        BOWindex = []
+        Kwistetindex = []
+        with open(PLOEGGENERAL, 'rt') as fr:
+            reader = csv.reader(fr)
+            header = next(reader)
+            for index, name in enumerate(header):
+                if 'SCR' in name:
+                    SCRindex.append(index)
+                elif 'BOW' in name:
+                    BOWindex.append(index)
+                elif 'Kwistet' in name:
+                    Kwistetindex.append(index)
+            
+            for index, row in enumerate(reader):
+                SCRsum = 0
+                BOWsum = 0
+                Kwistetsum = 0
+                for i in SCRindex:
+                    if not row[i] == 'x':
+                        SCRsum = SCRsum + int(row[i])
+                for i in BOWindex:
+                    if not row[i] == 'x':
+                        BOWsum = BOWsum + int(row[i])
+                for i in Kwistetindex:
+                    if not row[i] == 'x':
+                        Kwistetsum = Kwistetsum + int(row[i])
+                        
+                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor SCR. Stuurt uitnodiging naar Fans, en de laatste 2 SCR en laatste Kwistet deelnemers
+                if not int(row[SCRindex[len(SCRindex)-1]]) == 1 and index>int(minimum):
+                    if SCRsum+Kwistetsum+BOWsum>6 or int(row[SCRindex[len(SCRindex)-2]])==1 or int(row[SCRindex[len(SCRindex)-3]])==1 or int(row[Kwistetindex[len(Kwistetindex)-1]])==1:
+                        template = open(UITNODIGINGHERINNERING).read()
+                        text = template.format(VOORNAAM=row[0])
+                        onderwerp = 'Herinnering 6e Q@C Sinterklaasquiz Rotselaar 07/12/2018'
+                        adres = row[1]
+                       # self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        print(index, adres)
+                    else:
+                        print(index, row[1], 'Is niet recent naar een quiz geweest')
+                else:
+                    print(index, row[1], 'is al ingeschreven of kreeg al een mail')
+            print('Alles is verstuurd')
 
-
+     
 
 
