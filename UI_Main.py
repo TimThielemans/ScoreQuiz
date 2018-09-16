@@ -10,6 +10,8 @@ import UI_Inschrijvingen
 import UI_ScanControl
 import UI_Aanmelden
 import UI_Admin
+import decodeSheets
+        
 
 class startScherm(QtWidgets.QMainWindow):   
     def __init__(self, parent=None):
@@ -31,8 +33,8 @@ class startScherm(QtWidgets.QMainWindow):
         else:
             self.msgBox('Geen geldige directory, opgestart in default mode', 'Niet geldig')
 
-        import decodeSheets
-        import generateScorebord
+        from score_handler import Class_Scores
+        self.SH = Class_Scores()
         
     def selectDir(self):
         filename = 'settings.ini'
@@ -41,7 +43,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 1
+        debug = 0
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()
@@ -96,7 +98,9 @@ class startScherm(QtWidgets.QMainWindow):
         self.msgBox("Er werden {} scans verwerkt op {}s. Dat is een gemiddelde van {}s per pagina. Geef jij dat sneller in misschien?".format(aantal, round(tijd, 2), round(tijd/aantal, 2)), 'Klaar!')
 
     def scorebord(self):
-        geenBonus, ontbreekt, fout = generateScorebord.main()
+        qm = QtWidgets.QMessageBox()
+        answer = qm.question(QtWidgets.QDialog(), 'Bonus berekening', 'Bereken ook de optimale bonus? (enkel eenmaal bij de eindstand)', qm.Yes | qm.No)
+        geenBonus, ontbreekt, fout = self.SH.generateScorebord(answer == qm.Yes)
         fouten = False
         info = ''
         if len(geenBonus)>0:
@@ -136,4 +140,4 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = startScherm()
     sys.exit(app.exec_())
-
+    

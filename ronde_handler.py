@@ -229,6 +229,13 @@ class Class_Rondes():
         except NameError:
             raise
 
+    def getRondeInfoDict(self, searchValue):
+        reader = csv.DictReader(open(RONDEINFO, 'rt'))
+        for index, row in enumerate(reader):
+            if row['RN'] == str(searchValue) or row['Ronde'] == str(searchValue) or row['Afkorting'] == str(searchValue):
+                return row
+        return ''
+    
     def getRondes(self):
         data = self.getData()
         for i in range(0, self.aantalRondes()):

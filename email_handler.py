@@ -1,7 +1,7 @@
 
 
 import configparser, inspect, os
-
+import math
 import csv
 import pyqrcode
 
@@ -14,7 +14,8 @@ def read_Settings():
 
         global EMAILINSCHRIJVING
         global EMAILBETALINGSVRAAG
-        global EMAILHERINNERING
+        global EMAILBETALINGSHERINNERING
+        global EMAILLASTINFO
         global EMAILEINDSTAND
         global PLOEGGENERAL
         global UITNODIGINGSCR
@@ -23,20 +24,50 @@ def read_Settings():
         global UITNODIGINGLIEFHEBBER
         global UITNODIGINGFAN
         global UITNODIGINGHERINNERING
-        global QUIZFOLDER
         global QRCODES
         global INSCHRIJVINGSGELD
         global DRANKKAART
+        global BONUSOVERVIEW
+        global BONUSTHEMAS
         global REKENINGNUMMER
+        global TABLELAYOUT
+        global MOEILIJK
+        global MOEILIJKTRESHOLD
+
+        global SCOREBORD
+        global SCOREBORDINFO
+        global RONDEFILES
+        global SCHIFTING
+        global FINALPREFIX
+        global QUIZFOLDER
+        global ANTWOORDEN
+
+        global HEADERLEFT
+        global HEADERCENTER
+        global DATALEFT
+        global DATACENTER
+        
+
+        HEADERLEFT = config.get('LAYOUT', 'HEADERLEFT')
+        HEADERCENTER = config.get('LAYOUT', 'HEADERCENTER')
+        DATALEFT = config.get('LAYOUT', 'DATALEFT')
+        DATACENTER = config.get('LAYOUT', 'DATACENTER')
+        TABLELAYOUT = config.get('LAYOUT', 'TABLELAYOUT')
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
-        
-        EMAILINSCHRIJVING = QUIZFOLDER + config.get('EMAIL', 'INSCHRIJVING')
-        EMAILBETALINGSVRAAG = QUIZFOLDER + config.get('EMAIL', 'BETALING')
-        EMAILHERINNERING = QUIZFOLDER + config.get('EMAIL', 'HERINNERING')
-        EMAILEINDSTAND = QUIZFOLDER + config.get('EMAIL', 'EINDSTAND')
+        FINALPREFIX = config.get('COMMON', 'FINALPREFIX')
+        MOEILIJKTRESHOLD = float(config.get('COMMON', 'MOEILIJKTRESHOLD'))
+        SCOREBORD = QUIZFOLDER + config.get('PATHS', 'SCOREBORD')
+        RONDEFILES = QUIZFOLDER +config.get('PATHS', 'RONDEFILES')
+        SCOREBORDINFO = QUIZFOLDER + config.get('PATHS', 'SCOREBORDINFO')
+        MOEILIJK = QUIZFOLDER + config.get('PATHS', 'MOEILIJK')
+        SCHIFTING = float(config.get('COMMON', 'SCHIFTING'))
+
         QRCODES = QUIZFOLDER + config.get('PATHS', 'QRCODES')
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
+        BONUSOVERVIEW = QUIZFOLDER + config.get('PATHS', 'BONUSOVERVIEW')
+        BONUSTHEMAS = config.get('COMMON', 'BONUSTHEMAS').split(',')
+        ANTWOORDEN = QUIZFOLDER + config.get('PATHS', 'ANTWOORDEN')
 
         UITNODIGINGSCR  = QUIZFOLDER + config.get('EMAIL', 'SCR')
         UITNODIGINGBOW  = QUIZFOLDER + config.get('EMAIL', 'BOW')
@@ -44,11 +75,18 @@ def read_Settings():
         UITNODIGINGLIEFHEBBER  = QUIZFOLDER + config.get('EMAIL', 'LIEFHEBBER')
         UITNODIGINGFAN  = QUIZFOLDER +  config.get('EMAIL', 'FAN')
         UITNODIGINGHERINNERING = QUIZFOLDER + config.get('EMAIL', 'UITNODIGINGREMINDER')
+        EMAILINSCHRIJVING = QUIZFOLDER + config.get('EMAIL', 'INSCHRIJVING')
+        EMAILBETALINGSVRAAG = QUIZFOLDER + config.get('EMAIL', 'BETALING')
+        EMAILBETALINGSHERINNERING = QUIZFOLDER + config.get('EMAIL', 'BETALINGREMINDER')
+        EMAILLASTINFO = QUIZFOLDER + config.get('EMAIL', 'LAATSTEINFO')
+        EMAILEINDSTAND = QUIZFOLDER + config.get('EMAIL', 'EINDSTAND')
 
         INSCHRIJVINGSGELD = config.get('COMMON', 'INSCHRIJVINGSGELD')
         DRANKKAART = config.get('COMMON', 'DRANKKAARTGELD')
         REKENINGNUMMER = config.get('COMMON', 'REKENINGNUMMER')
 
+        if SCHIFTING.is_integer():
+            SCHIFTING = int(SCHIFTING)
         
     except Exception as error_msg:
         print("Error while trying to read Settings.")
@@ -61,9 +99,12 @@ class Class_Emails():
         read_Settings()
         from email_sender import Class_EmailSender
         from inschrijving_handler import Class_Inschrijvingen
-
+        from score_handler import Class_Scores
+        from ronde_handler import Class_Rondes
         self.EH = Class_EmailSender()
         self.PH = Class_Inschrijvingen()
+        self.RH = Class_Rondes()
+        self.SH = Class_Scores()
 
     def bevestigingInschrijving(self, ploeginfo):
         template = open(EMAILINSCHRIJVING).read()
@@ -74,13 +115,42 @@ class Class_Emails():
     def sendBetalingQR(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']
         mededeling = ploeginfo['Mededeling']
-        email = 'tim.thielemans@gmail.com' #ploeginfo['Email']
+        email = ploeginfo['Email']
         onderwerp = 'Betaling en QRcode 6e Q@C Sinterklaasquiz'
         filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
-        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        print(email)
+
+    def sendBetalingReminder(self, ploeginfo):
+        ploegnaam = ploeginfo['Ploegnaam']
+        mededeling = ploeginfo['Mededeling']
+        email = ploeginfo['Email']
+        onderwerp = 'Herinnering betaling 6e Q@C Sinterklaasquiz'
+        template = open(EMAILBETALINGSHERINNERING).read()
+        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
+        #self.EH.send_HTML_Mail(email, onderwerp, tekst)
+        print(email)
+
+
+    def sendWrapUp(self, ploeginfo):
+        ploegnaam = ploeginfo['Ploegnaam']
+        email = ploeginfo['Email']
+        onderwerp = 'Laatste informatie 6e Q@C Sinterklaasquiz'
+        filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
+
+        if bool(int(ploeginfo['Betaald'])):
+            mededeling = 'We hebben uw betaling van €{} goed ontvangen'.format(ploeginfo['Bedrag'])
+        else:
+            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €20 klaar bij het aanmelden :) Het heeft in ieder geval geen zin om nu nog over te schrijven aangezien die betaling waarschijnlijk nog niet verwerkt is tegen vrijdag.'
+
+        template = open(EMAILLASTINFO).read()
+        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, BETALINGTEKST = mededeling)
+        #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        print(email)
         
     def sendUitnodigingen(self, minimum):
         SCRindex = []
@@ -183,6 +253,158 @@ class Class_Emails():
                     print(index, row[1], 'is al ingeschreven of kreeg al een mail')
             print('Alles is verstuurd')
 
-     
+    def sendEindstand(self):
+        
+        aantalDeelnemers,_,_,_ = self.PH.aantalPloegen()
+        self.worstAnsweredQuestions(aantalDeelnemers)
+        for i in range(0, aantalDeelnemers):
+            pos = i+1
+            eindstandPloeg = self.SH.getFinalScore(pos)
+            ploegnaam = eindstandPloeg['Ploegnaam']
+            tafelnummer = eindstandPloeg['TN']
+            ploegInfo = self.PH.getPloegInfo(ploegnaam)
+            email = ploegInfo['Email']
+            onderwerp = 'Evaluatie en Score 6e Q@C Sinterklaasquiz'
+            #AANPASSEN naar geland wat de schiftingsvraag was
+            schifting = str(SCHIFTING) + ' gram'
+            positie = str(pos) + 'e'
 
+            bonusTekst = self.generateBonusTekst(ploegnaam)
+            rondescores = self.generateEigenOverzicht(tafelnummer)
+            eindstand = self.generateNabijeOverzicht(pos, aantalDeelnemers, len(bonusTekst)>1)
+            winnaars = self.generateNabijeOverzicht(1,1,len(bonusTekst)>1)
+            
+            template = open(EMAILEINDSTAND).read()
+            tekst = template.format(PLOEGNAAM = ploegnaam, EINDPOSITIE = positie, AANTALDEELNEMERS = aantalDeelnemers, MOEILIJK = MOEILIJKTRESHOLD*100, BONUSTEKST = bonusTekst, SCHIFTINGSANTWOORD = schifting, EIGENOVERZICHT = rondescores, EINDSTANDNABIJ = eindstand, SCOREWINNAARS = winnaars)
+            #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
+            print(pos, email)
+
+    def generateBonusTekst(self, ploegnaam):
+        with open(BONUSOVERVIEW, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for row in reader:
+                if row['Ploegnaam'] == ploegnaam:
+                    tekst = 'Jullie kozen {} als bonusthema ({}/{})'.format(BONUSTHEMAS[int(row['Origineel'])], row['OrigineelScore'], row['Maximum'])
+                    if int(row['BesteScore'])>int(row['OrigineelScore']):
+                        tekst = tekst + ', dat is niet slecht maar op {} heb je beter gescoord ({}/{})! '.format(BONUSTHEMAS[int(row['Beste'])], row['BesteScore'], row['Maximum'])
+                    else:
+                        tekst = tekst + ', goed ingeschat dus want het was jullie beste thema! '
+
+                    return tekst
+        return ''
+
+    def getBonusScore(self, ploegnaam):
+        with open(BONUSOVERVIEW, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for row in reader:
+                if row['Ploegnaam'] == ploegnaam:
+                    tekst = BONUSTHEMAS[int(row['Origineel'])] + ' ({}/{})'.format(row['OrigineelScore'], row['Maximum'])
+                    return tekst
+        return ''
+
+    def generateEigenOverzicht(self, tafelnummer):
+
+        tekst = TABLELAYOUT + '<tr>' + HEADERLEFT.format(HEADER = 'Ronde') + HEADERCENTER.format(HEADER = 'Eigen Score') + HEADERCENTER.format(HEADER = 'Maximum Score') + HEADERCENTER.format(HEADER = 'Gemiddelde score') + '</tr>'
+
+        totaalScore = 0
+        maximumScore = 0
+        gemiddeldeScore = 0
+
+        with open(SCOREBORDINFO, 'rt') as fr1:
+            reader = csv.DictReader(fr1)
+            for usedRound in reader:
+                rondeNaam= usedRound['Ronde']
+                maximumRondeScore = 0
+                gemiddeldeRondeScore = 0
+                eigenRondeScore = 0
+                with open(RONDEFILES + FINALPREFIX + rondeNaam + '.csv', 'rt') as fr:
+                    reader = csv.reader(fr)    
+                    for row in reader:
+                        if row[1] == str(tafelnummer):
+                            eigenRondeScore = sum(map(int, row[3:]))
+                        elif 'Max/Gem' in row:
+                            maximumRondeScore = row[0]
+                            gemiddeldeRondeScore = round(float(row[1]),1)
+
+                maximumScore = int(maximumRondeScore)+ maximumScore
+                totaalScore = eigenRondeScore + totaalScore
+                gemiddeldeScore = float(gemiddeldeRondeScore) + gemiddeldeScore
+
+                tekst = tekst + '<tr>' + DATALEFT.format(DATA = rondeNaam) + DATACENTER.format(DATA = eigenRondeScore) + DATACENTER.format(DATA = maximumRondeScore) + DATACENTER.format(DATA = gemiddeldeRondeScore) + '</tr>'
+               
+        tekst = tekst + '<tr>' + DATALEFT.format(DATA = 'Totaal') + DATACENTER.format(DATA = str(totaalScore) + ' ({}%)'.format(round(totaalScore/maximumScore*100,2))) + DATACENTER.format(DATA = maximumScore) + DATACENTER.format(DATA = str(round(float(gemiddeldeScore),2)) + ' ({}%)'.format(round(gemiddeldeScore/maximumScore*100,2))) + '</tr>'
+        tekst = tekst + '</table></div>'
+        return tekst
+
+    def generateNabijeOverzicht(self, positie, aantalPloegen, bonus):
+        aantalPlusMin = 5
+        aantalRondes = 0
+
+        tekst = TABLELAYOUT + '<tr>' + HEADERLEFT.format(HEADER = 'Nr.') + HEADERLEFT.format(HEADER = 'Ploegnaam') + HEADERCENTER.format(HEADER = 'Totaal')
+        with open(SCOREBORDINFO, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for row in reader:
+                tekst = tekst + HEADERCENTER.format(HEADER = row['Afkorting'])
+                aantalRondes = aantalRondes +1
+        if bool(bonus):
+            tekst = tekst + HEADERCENTER.format(HEADER = 'Bonus')
+        tekst = tekst + HEADERCENTER.format(HEADER='Schiting') + '</tr>'
+
+        nabijescores = self.SH.getFinalScores(positie, aantalPloegen, aantalPlusMin)
+        for scores in nabijescores:
+            ploegnaam = scores[2]
+            ploegnaam = (ploegnaam[:18] + '..') if len(ploegnaam) > 18 else ploegnaam
+            tekst = tekst + '<tr>' + DATALEFT.format(DATA = scores[0]) + DATACENTER.format(DATA = ploegnaam) + DATACENTER.format(DATA = scores[3])
+            for i in range(0, aantalRondes):
+                tekst = tekst + DATACENTER.format(DATA = scores[5+i])
+            if bool(bonus):
+                tekst = tekst + DATACENTER.format(DATA = self.getBonusScore(ploegnaam))
+            schifting = float(scores[len(scores)-2])
+            if schifting.is_integer():
+                schifting = int(schifting)
+            tekst = tekst + DATACENTER.format(DATA = round(float(scores[len(scores)-2]),2)) +  '</tr>'
+        
+        return tekst
+
+    def worstAnsweredQuestions(self, aantalDeelnemers):
+        filenames = []
+        rondenaam = []
+        rondenummer = []
+        with open(SCOREBORDINFO, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for row in reader:
+                filenames.append(RONDEFILES + FINALPREFIX + row['Ronde'] + '.csv')
+                rondenaam.append(row['Afkorting'])
+                rondenummer.append(int(row['RN']))
+
+        antwoordLimiet = int(math.ceil(aantalDeelnemers*MOEILIJKTRESHOLD))
+        moeilijkeVragen = []
+        antwoorden = self.getAntwoorden()
+        for index, file in enumerate(filenames):
+            with open(file, 'rt') as fr:
+                reader =csv.reader(fr)
+                for row in reader:
+                    if 'Max/Gem' in row:
+                        aantalJuist = row[2:len(row)-1]
+                        aantalJuist = list(map(int, aantalJuist))
+                        for i in range(0, len(aantalJuist)):
+                            if aantalJuist[i]<=antwoordLimiet:
+                                VN = i+1
+                                moeilijkeVragen.append([rondenaam[index], VN, aantalJuist[i], antwoorden[rondenummer[index]-1][VN]])
+        
+        moeilijkeVragen = sorted(moeilijkeVragen,key=lambda x: (x[2], x[0]))
+        
+        with open(MOEILIJK, "w") as fw:
+            fw.write('#Juist' + '\t' + 'Ronde'+ '\t' + 'Vraag' + '\t' +'Antwoord' + '\n')
+            for i in range(len(moeilijkeVragen)):
+                fw.write(str(moeilijkeVragen[i][2]) + '\t' + str(moeilijkeVragen[i][0]) + '\t' + str(moeilijkeVragen[i][1]) + '\t' + str(moeilijkeVragen[i][3])+ '\n')
+                         
+    def getAntwoorden(self):
+        with open(ANTWOORDEN, 'rt')as fr:
+            reader = csv.reader(fr)
+            return list(reader)
+        
+
+
+    
 

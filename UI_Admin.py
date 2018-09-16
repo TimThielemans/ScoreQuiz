@@ -45,8 +45,12 @@ class AdminUI(QtWidgets.QDialog):
         self.RAllBtn.clicked.connect(self.totalReset)
 
         self.BetalingBtn.clicked.connect(self.betalingToevoegen)
-
         self.BetalingQRBtn.clicked.connect(self.emailBetalingQR)
+        self.QRBtn.clicked.connect(self.emailQRLastDay)
+        self.BetalingReminderBrn.clicked.connect(self.emailBetalingReminder)
+        self.EindstandBtn.clicked.connect(self.emailEindstand)
+        self.Uitnodiging2Btn.clicked.connect(self.emailUitnodigingReminder)
+        self.UitnodigingBtn.clicked.connect(self.emailUitnodiging)
         
 
     def fillComboBoxes(self):
@@ -101,39 +105,44 @@ class AdminUI(QtWidgets.QDialog):
             self.EmailTxt.setText('')
 
 
-    def emailUitnodigingFirst(self):
+    def emailUitnodiging(self):
         if self.questionBox('Zeker?', 'Zeker dat je al de uitnodigingen wil versturen. Kijk zeker na in email_handler wat de volgorde is van belangrijkheid van quiz!'):
             answer, ok = QtWidgets.QInputDialog.getInt(self, 'Start index', 'Wat is de laatst verzonden index?')
             if ok:
-                print(answer)
-                self.EH.sendUitnodigingen(answer)
+                self.EH.sendUitnodigingen(int(answer))
             
     def emailUitnodigingReminder(self):
         if self.questionBox('Zeker?', 'Zeker dat je herinneringen wil versturen? Kijk zeker na in email_handler wat de volgorde is van belangrijkheid van quiz, normaal naar de laatste 2 edities van deze en de meest recente quiz'):
             answer, ok = QtWidgets.QInputDialog.getInt(self, 'Start index', 'Wat is de laatst verzonden index?')
             if ok:
-                print(answer)
-                self.EH.sendUitnodigingenReminder(answer)
+                self.EH.sendUitnodigingenReminder(int(answer))
 
     def emailBetalingQR(self):
         if self.questionBox('Zeker?', 'Zeker dat je vraag tot betaling wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
             for ploeginfo in self.PH.getPloegenDict():
                 self.EH.sendBetalingQR(ploeginfo)
 
-    #def emailBetalingReminder(self):
+    def emailBetalingReminder(self):
+        if self.questionBox('Zeker?', 'Zeker dat je de betalingsreminder wil versturen naar iedereen die nog niet betaald heeft? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+            for ploeginfo in self.PH.getPloegenDict():
+                if not bool(int(ploeginfo['Betaald'])):
+                    self.EH.sendBetalingReminder(ploeginfo)
 
-    #def emailQRLastDay(self):
+    def emailQRLastDay(self):
+        if self.questionBox('Zeker?', 'Zeker dat je de laatste info wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+            for ploeginfo in self.PH.getPloegenDict():
+                self.EH.sendWrapUp(ploeginfo)
 
-    #def emailEindstand(self):
-    
+    def emailEindstand(self):
+        if self.questionBox('Zeker?', 'Zeker dat je de eindstand wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+            self.EH.sendEindstand()
 
     def betalingToevoegen(self):    
         dialog = QtWidgets.QFileDialog()
         dialog.setViewMode(QtWidgets.QFileDialog.Detail);
         if(dialog.exec()):
             filenames = dialog.selectedFiles()
-            print(filenames[0])
-            #self.PH.setBetalingen(filenames[0])
+            self.PH.setBetalingen(filenames[0])
             
     def resetAanmelden(self):
         if self.questionBox('Zeker?', 'Zeker dat je al de aanmeldingen, en dus ook de scores, wilt resetten?'):

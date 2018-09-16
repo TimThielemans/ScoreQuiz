@@ -28,11 +28,18 @@ class Control(QtWidgets.QMainWindow):
             self.setImageLbl()
             self.nextBtn.clicked.connect(self.nextFile)
             self.updateScoreBtn.clicked.connect(self.updateScore)
+            self.allesJustBtn.clicked.connect(self.allesOverzetten)
         else:
             msg = QtWidgets.QMessageBox()
             msg.setText("Alle beschikbare scans zijn gecontroleerd dus je kan hier niets mee doen...")
             msg.setWindowTitle("Klaar!")
             msg.exec()
+
+    def allesOverzetten(self):
+        bereik = range(self.ScanDataIndex, len(self.AllScanData))
+        for i in bereik:
+            self.nextFile()
+        self.allChecked(True)
         
     def nextFile(self):
         if self.updateScore():
@@ -45,7 +52,7 @@ class Control(QtWidgets.QMainWindow):
                 self.updateLayout()
             else:
                 self.allChecked(True)
-
+    
     def updateFile(self):
         data = self.AllScanData[self.ScanDataIndex]
         self.filename = data[1]

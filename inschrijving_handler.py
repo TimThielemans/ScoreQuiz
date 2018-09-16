@@ -253,7 +253,7 @@ class Class_Inschrijvingen():
                 data = self.getData()
                 data[X][Y] = bedrag + data[X][Y]
                 if  data[X][Y]>=INSCHRIJVINGSGELD:
-                    data[X][Y] = 1
+                    data[X][FIELDNAMES.index('Betaalt')] = 1
                 with open(PLOEGINFO, 'w') as fw:
                     writer = csv.writer(fw)
                     writer.writerows(data)
@@ -267,6 +267,14 @@ class Class_Inschrijvingen():
                 messageFree = row['Vrije mededeling']
                 bedrag = row['credit']
                 self.setBetaling(messageStruct, bedrag)
+
+    def setBonusses(self, bonusthemas):
+        data = self.getData()
+        for X in range(1,len(data)):
+            data[X][FIELDNAMES.index('Bonus')] = bonusthemas[X-1]
+        with open(PLOEGINFO, 'w') as fw:
+            writer =csv.writer(fw)
+            writer.writerows(data)
 
 #========================================GETTERS====================================================
 

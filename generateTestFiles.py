@@ -21,12 +21,19 @@ def read_Settings():
         global RONDEINFO
         global RONDEFILES
         global SCHIFTING
-        global HEADERSglobal QUIZFOLDER
+        global HEADERS
+        global QUIZFOLDER
+        global SCANRAW
+        global DEFAULT_OUTPUTDIR
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
-        PLOEGINFO = QUIZFOLDER + config.get('PATHS', 'PLOEGINFOTEST')
+        SCANRAW = config.get("COMMON","SCANRAW")
+        DEFAULT_OUTPUTDIR = QUIZFOLDER + config.get("PATHS", "RONDEFILES")
+
+       
+        PLOEGINFO = QUIZFOLDER + config.get('PATHS', 'PLOEGINFO')
         RONDEFILES = QUIZFOLDER + config.get('PATHS', 'RONDEFILES')
-        RONDEINFO = QUIZFOLDER+ config.get('PATHS', 'RONDEINFOTEST')
+        RONDEINFO = QUIZFOLDER+ config.get('PATHS', 'RONDEINFO')
         SCHIFTING = float(config.get('COMMON', 'SCHIFTING'))
         HEADERS = QUIZFOLDER + config.get('PATHS', 'HEADERS')
 
@@ -43,48 +50,42 @@ def read_Settings():
 def main():
    
     read_Settings()
-
-    with open(HEADERS, 'rt') as fr, open(PLOEGINFO, 'w') as fw1, open(RONDEINFO, 'w') as fw2: 
-        reader= csv.reader(fr)
-        writer1 = csv.writer(fw1)
-        writer2 = csv.writer(fw2)
-        writer1.writerow(next(reader))
-        writer2.writerow(next(reader))
-
-    from ronde_handler import Class_Rondes
     from inschrijving_handler import Class_Inschrijvingen
-    global RH
-    global PH
-    RH = Class_Rondes()
+    from ronde_handler import Class_Rondes
+
     PH = Class_Inschrijvingen()
-
-    aantalPloegen = 60
-    aantalGewoneRondes = 8
-
+    RH = Class_Rondes()
     
-    for i in range(0, aantalGewoneRondes):
-        RH.nieuweRonde(['Ronde{}'.format(i+1), 11, 0, 1])
-
-    RH.nieuweRonde(['Ronde{}'.format(aantalGewoneRondes+1), 15, 0, 0])
-    RH.nieuweRonde(['RondeSuper',10, 1, 0])
-
+    PH.verwijderAllePloegen()
+    RH.verwijderAlleRondes()
+    aantalPloegen = 60
     for i in range(0, aantalPloegen):
         PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'tim.thielemans@gmail.com'])
-        PH.setSchiftingBonus('Ploegske{}'.format(i+1), SCHIFTING*random.uniform(0.5, 1.5), 2)
+        PH.aanmelden('Ploegske{}'.format(i+1))
+        PH.setSchiftingBonus('Ploegske{}'.format(i+1), SCHIFTING*random.uniform(0.5, 1.5), random.randint(1,9))
 
-    for i, ronde in enumerate(RH.getRondes()):
-        with open(RONDEFILES+ronde[1]+'.csv', 'w') as fw:
-            writer = csv.writer(fw)
+    RH.nieuweRonde(['Ronde1', 'R1', 11, 0, 1])
+    RH.nieuweRonde(['Ronde2', 'R2', 11, 0, 1])
+    RH.nieuweRonde(['Tafelronde1', 'Taf1', 20, 0, 0]) 
+    RH.nieuweRonde(['Ronde3', 'R3', 11, 0, 1]) 
+    RH.nieuweRonde(['Ronde4', 'R4', 11, 0, 1]) 
+    RH.nieuweRonde(['Ronde5', 'R5', 11, 0, 1]) 
+    RH.nieuweRonde(['Ronde6', 'R6', 11, 0, 1])
+    RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
+    RH.nieuweRonde(['Ronde7', 'R7', 11, 0, 1]) 
+    RH.nieuweRonde(['Ronde8', 'R8', 11, 0, 1])
+    RH.nieuweRonde(['Finale', 'Finale', 15, 0, 0])
+
+    with open(DEFAULT_OUTPUTDIR+SCANRAW, 'w') as fw:               
+        writer = csv.writer(fw)
+        for i, ronde in enumerate(RH.getRondes()):
             NOQ, SUPER = RH.getVragenSuper(ronde[0])
-            header = ['RN', 'TN']
             for j, ploeg in enumerate(PH.getPloegen()):
                 data = [ronde[0], ploeg[1]]
                 for k in range(0, int(NOQ)):
-                    header.append(k+1)
-                    data.append(random.randint(0, 1))
-                if j == 0:
-                    writer.writerow(header)
+                    if not SUPER:
+                        data.append(random.randint(0, 1))
                 writer.writerow(data)
-    
+
 if __name__ == '__main__':
     main()

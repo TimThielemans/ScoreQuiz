@@ -5,6 +5,7 @@ import random
 import shutil
 import itertools
 import configparser, inspect, os
+import statistics
 
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
@@ -23,13 +24,19 @@ def read_Settings():
         global JPGPREFIX
         global IMAGESDIR
         global QUIZFOLDER
+        global BONUSOVERVIEW
+        global BONUSTHEMAS
+        global SCHIFTING
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         SCOREBORD = QUIZFOLDER+config.get('PATHS', 'SCOREBORD')
         SCOREBORDINFO = QUIZFOLDER+config.get('PATHS', 'SCOREBORDINFO')
         RONDEFILES = QUIZFOLDER+config.get('PATHS', 'RONDEFILES')
         IMAGESDIR = QUIZFOLDER+config.get('PATHS', 'OUTPUTIMAGES')
+        BONUSOVERVIEW = QUIZFOLDER + config.get('PATHS', 'BONUSOVERVIEW')
+        BONUSTHEMAS = config.get('COMMON', 'BONUSTHEMAS').split(',')
         
+        SCHIFTING = float(config.get('COMMON', 'SCHIFTING'))
         SCANRAW = config.get('COMMON', 'SCANRAW')
         SCANCONTROL = config.get("COMMON","SCANCONTROL")
         USERPREFIX = config.get("COMMON","USERPREFIX")
@@ -154,7 +161,82 @@ class Class_Scores():
                 if not int(row[1]) == int(ploeg):
                     writer.writerow(row)
         shutil.move(tmp, filename)
+
+    def getFinalScore(self, ploegnaamPositie):
+        with open(SCOREBORD, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            next(reader)
+            for row in reader:
+                if row['Ploegnaam'] == ploegnaamPositie or row['Positie'] == str(ploegnaamPositie):
+                    return row
+        return ''
+
+    def getFinalScores(self, positie, aantaldeelnemers, plusmin):
+        result = []
+        posities = list(map(str, range(max(1, int(positie)-int(plusmin)), min(aantaldeelnemers, int(positie)+int(plusmin))+1)))
+        with open(SCOREBORD, 'rt') as fr:
+            reader = csv.reader(fr)
+            for row in reader:
+                if row[0] in posities:
+                    result.append(row)
+        return result
+    
+    def generateBonusOverview(self):
+        #Bereken Score met originele thema
+        #Bereken score voor al de andere thema's zet hiervoor al de thema's steeds eens op het zelfde voor alle ploegen en bereken opnieuw de score
+        #Bekijk wat het beste resultaat was en schrijf dat in BONUSOVERVIEW
+        #Zet de origineleBonusThemas terug in PLOEGINFO en maak opnieuw Final bestanden aan alsof er niets gebeurd is
         
+        headers = ['TN', 'Ploegnaam', 'Origineel', 'OrigineelScore', 'Beste', 'BesteScore', 'Maximum']
+        origineleBonusThemas = []
+        for ploeginfo in self.PH.getPloegenDict():
+            origineleBonusThemas.append(ploeginfo['Bonus'])
+
+        bonusScore = []
+        for i in range(0, len(BONUSTHEMAS)):
+            self.PH.setBonusses([i]*len(origineleBonusThemas))
+            self.makeFinal()
+            score, maximum = self.calculateBonusScore()
+            bonusScore.append(score)
+
+        self.PH.setBonusses(origineleBonusThemas)
+        self.makeFinal()
+        eigenScore, maximum = self.calculateBonusScore()
+
+        with open(BONUSOVERVIEW, 'w') as fw:
+            writer = csv.writer(fw)
+            writer.writerow(headers)
+            for i, ploeginfo in enumerate(self.PH.getPloegenDict()):
+                start = [ploeginfo['TN'], ploeginfo['Ploegnaam'], ploeginfo['Bonus'], eigenScore[i]]
+                besteScore = eigenScore[i]
+                beste = ploeginfo['Bonus']
+                for index in range(0, len(BONUSTHEMAS)):
+                    if bonusScore[index][i]>besteScore:
+                        besteScore = bonusScore[index][i]
+                        beste = index
+                writer.writerow(start + [beste] + [besteScore] +[maximum])
+                
+    def calculateBonusScore(self):
+        bonusscore=[]
+        maximum = 0
+        filenames = os.listdir(RONDEFILES)
+        with open(SCOREBORDINFO, 'rt') as fr:
+            readerInfo = csv.DictReader(fr)
+            for row in readerInfo:
+                filename = FINALPREFIX + row['Ronde'] + '.csv'
+                if filename in filenames and bool(self.RH.isBonusRonde(row['Ronde'])):
+                    with open(RONDEFILES+ filename) as fr2:
+                        reader = csv.DictReader(fr2)
+                        if len(bonusscore)<1:
+                            for index, row in enumerate(reader):
+                                bonusscore.append(int(row['Bonus']))
+                        else:
+                            for index, row in enumerate(reader):
+                                bonusscore[index] = bonusscore[index] + int(row['Bonus'])
+                    maximum = maximum + 1
+
+        return bonusscore, maximum
+    
     def fromScannerToUser(self):
         #De SCANCONTROL sorteren volgens rondenummer
         #alles in SCANCONTORL omvromen naar rondefiles met userprefix
@@ -241,10 +323,10 @@ class Class_Scores():
             if FINALPREFIX in filename:
                 with open(RONDEFILES + filename, 'r') as fr:
                     data = list(csv.reader(fr))
-                    if not len(data)-1 == len(nummers):
+                    if not len(data)-2 == len(nummers):
                         #miserie...
                         ronde = data[1][0]
-                        for X in range(1, len(data)):
+                        for X in range(1, len(data)-1):
                             try:
                                 index = nummers.index(int(data[X][1]))
                                 del nummers[index]
@@ -272,6 +354,7 @@ class Class_Scores():
         #remove all files with FINALPREFIX
         #Check op aanwezigheden
         #voeg de bonusthema's toe!
+        #Analyse van elke ronde op het einde (gemiddelde, aantalJuist per vraag)
 
         filenames = os.listdir(RONDEFILES)
         tmp = RONDEFILES +  'tmp.csv'
@@ -289,22 +372,38 @@ class Class_Scores():
                     header = next(reader)
                     currentRound = 0
                     bonusRonde = 0
-                    for row in reader:
+                    superRonde = 0
+                    totaalScore = []
+                    JuisteAntwoorden = [0]*(len(header)-2)
+                    for index, row in enumerate(reader):
                         ronde = int(row[0])
                         if not currentRound == ronde:
                             bonusRonde = self.RH.isBonusRonde(ronde)
+                            superRonde = self.RH.isSuperRonde(ronde)
                             if bonusRonde == 1:
                                 header.append('Bonus')
+                                JuisteAntwoorden.append(0)
                             writer.writerow(header)
                         if bonusRonde == 1:
                             schifting, bonus = self.PH.getSchiftingBonus(int(row[1]))
                             if bonus>0:
-                                row.append(row[bonus+3])
+                                row.append(row[bonus+1])
                             else:
                                 if not row[1] in geenBonus:
                                     geenBonus.append(row[1])
+                                row.append(0)
+                        for i, score in enumerate(row[2:]):
+                            JuisteAntwoorden[i] = JuisteAntwoorden[i]+int(score)
                         writer.writerow(row)
+                        if superRonde == 1:
+                            tmpscore = list(map(int, row[2:]))
+                            totaalScore.append(sum(tmpscore[0:len(tmpscore):3])+2*sum(tmpscore[1:len(tmpscore):3])+3*sum(tmpscore[2:len(tmpscore):3]))
+                        else:
+                            totaalScore.append(sum(map(int, row[2:])))
                         currentRound = ronde
+                        
+                    writer.writerow([len(JuisteAntwoorden)] + [round(statistics.mean(totaalScore),2)] + JuisteAntwoorden + ['Max/Gem'])
+                        
                 shutil.move(tmp, RONDEFILES+ filename.replace(USERPREFIX, FINALPREFIX))
         ontbreekt, fout = self.checkAanwezigheden()
         geenBonus = sorted(geenBonus)
@@ -322,4 +421,149 @@ class Class_Scores():
             for count, row in enumerate(sorted2):
                 writer.writerow(row)
         os.rename(tmp, filename)
+
+
+    def collectAllInfo(self):
+    #Zet de verschillende csv files per ronde samen in een groot bestand en sorteert dit dan zodat alles per ploeg en dan per ronde staat gerangschikt
+        tmp = 'tmp.csv'
+        with open(tmp , 'w') as fw:
+            writer = csv.writer(fw)
+            filenames = os.listdir(RONDEFILES)
+            for file in filenames:
+                if file.endswith('.csv') and file.startswith(FINALPREFIX):
+                    with open(RONDEFILES + file, mode='rt') as fr:
+                        reader = csv.reader(fr)
+                        next(reader)
+                        for row in reader:
+                            if not 'Max/Gem' in row:
+                                row = list(map(int, row))
+                                if row[0]==SUPERNR :
+                                    score = sum(row[2:len(row):3])+2*sum(row[3:len(row):3])+3*sum(row[4:len(row):3])
+                                else:
+                                    score = sum(row[2::])
+                                writer.writerow([row[1], row[0], score])
+
+        #sorteer volgens tafelnummer en dan volgens rondenummer
+        with open(tmp, mode='rt') as fr, open(SCOREBORD, 'w') as fw:
+            writer = csv.writer(fw)
+            reader = csv.reader(fr)
+            writer.writerow(['TN', 'RN', 'Score'])
+            sorted2 = sorted(reader, key = lambda row: (int(row[0]), int(row[1])))
+            for row in sorted2:
+                writer.writerow(row)
+
+        
+    def makeScorebordInfo(self):
+        #Dit werkt enkel op basis van CollectAllInfo
+        with open(SCOREBORD, mode ='rt') as fr, open(SCOREBORDINFO, 'w') as fw:
+            fields = ['RN', 'Ronde', 'Afkorting', 'Maximum']
+            writer = csv.DictWriter(fw, fields )
+            reader = csv.DictReader(fr)
+            writer.writeheader()
+            vorigePloeg = 0
+            for i, row in enumerate(reader):
+                if i>0 and not int(row['TN']) == vorigePloeg:
+                    break
+                else:
+                    rn = row['RN']
+                    try:
+                        info = self.RH.getRondeInfoDict(rn) #Rondenr, rondenaam, Afkorting, NOQ, superronde, bonusronde, sheet
+                    except NameError:
+                        print(rn)
+                        raise
+                    maximum = int(info['Aantal'])*(1+2*int(info['Super']))+int(info['Bonus']) #bonusronde + 1, superronde * 3
+                    writer.writerow({'RN': rn, 'Ronde': info['Ronde'], 'Afkorting': info['Afkorting'] , 'Maximum': maximum})
+                    vorigePloeg = int(row['TN'])
+
+    def setHeaders(self):
+        global FIELDNAMES
+        global ROW1
+        
+        FIELDNAMES = ['Positie', 'TN', 'Ploegnaam', 'Totaal', 'Percent']
+        ROW1 = ['', '', '','', '100']
+
+        with open(SCOREBORDINFO, 'rt') as fr:
+            readerInfo = csv.DictReader(fr)
+            for row in readerInfo:
+                FIELDNAMES.append(row['Ronde'])
+                ROW1.append(int(row['Maximum']))
+        ROW1[3] = sum(ROW1[5:])
+        FIELDNAMES.append('Schifting')
+        ROW1.append('')
+        FIELDNAMES.append('NormSchifting')
+        ROW1.append('')
+        
+    def generateScorebord(self, bonusGeneration):
+        a = time.time()
+        geenBonus, ontbreekt, fout = self.makeFinal()
+        print(time.time()-a)
+        self.collectAllInfo()
+        print(time.time()-a)
+        self.makeScorebordInfo()
+        print(time.time()-a)
+        self.setHeaders()
+        print(time.time()-a)
+        if bonusGeneration:
+            self.generateBonusOverview()
+            print(time.time()-a)
+        
+        
+        tmp = 'tmp.csv'
+        with open(SCOREBORD, mode='rt') as fr,  open(tmp, 'w') as fw:
+            writer = csv.writer(fw)
+            reader = csv.DictReader(fr)
+            writer.writerow(FIELDNAMES)
+            writer.writerow(ROW1)
+            
+            vorigePloeg = 0
+            ploegdata = ['']
+            for i, row in enumerate(reader):
+                if not int(row['TN']) == vorigePloeg and not 'Max/Gem' in row:
+                    #nieuwe ploeg
+                    if i>0:
+                        ploegdata[3] = sum(map(int,ploegdata[5:]))
+                        ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
+                        schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
+                        schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
+                        ploegdata.append(schiftingantwoord)
+                        ploegdata.append(schiftingnorm)               
+                        writer.writerow(ploegdata)
+                    try:
+                        ploegdata = ['', row['TN'], self.PH.getPloegnaam(row['TN']), '', '']
+                        ploegdata.append(row['Score'])
+                    except NameError:
+                        print(row['TN'])
+                else:
+                    #zelfde ploeg
+                    ploegdata.append(row['Score'])
+
+                vorigePloeg = int(row['TN'])
+
+            ploegdata[3] = sum(map(int,ploegdata[5:]))
+            ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
+            schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
+            schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
+            ploegdata.append(schiftingantwoord)
+            ploegdata.append(schiftingnorm)               
+            writer.writerow(ploegdata)
+
+        #sorteren
+        with open(tmp, mode='rt') as fr, open(SCOREBORD, 'w') as fw:
+            writer = csv.writer(fw)
+            reader = csv.reader(fr)
+            writer.writerow(FIELDNAMES)
+            writer.writerow(ROW1)
+            next(reader)
+            next(reader)
+            sorted2 = sorted(reader, key = lambda row: (row[FIELDNAMES.index('Totaal')], row[FIELDNAMES.index('NormSchifting')]), reverse=True)
+            positie = 1
+            for positie, row in enumerate(sorted2):
+                writer.writerow([positie+1] + row[1:])
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        print(time.time()-a)
+        return geenBonus, ontbreekt, fout
+
         

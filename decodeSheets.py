@@ -61,7 +61,6 @@ def readSettings():
     HR = Class_Rondes()
     HP = Class_Inschrijvingen()
     
-    
     try:
         config = configparser.ConfigParser()
         config.read('settings.ini')
@@ -71,7 +70,7 @@ def readSettings():
         global DEFAULT_INPUTDIR
         global SCANRAW
         global JPGPREFIX
-       # global PROCESSEDDIR
+        global PROCESSEDDIR
         global OUTPUTIMAGES
         global MARKED_TRESHOLD
         global SHEETINFO
@@ -82,11 +81,11 @@ def readSettings():
         
         
         SCANRAW = config.get("COMMON","SCANRAW")
-        DEFAULT_OUTPUTDIR = config.get("PATHS", "RONDEFILES")
+        DEFAULT_OUTPUTDIR = QUIZFOLDER + config.get("PATHS", "RONDEFILES")
         OUTPUTIMAGES = QUIZFOLDER + config.get('PATHS', 'OUTPUTIMAGES')
-        DEFAULT_INPUTDIR = QUIZFOLDER + config.get("PATHS", "FTP")
+        DEFAULT_INPUTDIR = config.get("PATHS", "FTP")
         JPGPREFIX = config.get('COMMON', 'JPGPREFIX')
-       # PROCESSEDDIR = QUIZFOLDER + config.get('PATHS', 'RONDEFILES')
+        PROCESSEDDIR = config.get("PATHS", "PROCESSEDFILES")
         MARKED_TRESHOLD = float(config.get('COMMON', 'TRESHOLD'))
         SHEETINFO = QUIZFOLDER + config.get('PATHS', 'SHEETINFO')
         UPSIZING = int(config.get('COMMON', 'UPSIZE'))
@@ -406,7 +405,7 @@ def decodeSheet(filename, outputDir, rondeCheck):
     tmp = filename.split('/')
     filenew = tmp[len(tmp)-1]
     ronde,ploeg= filenew.replace('.jpg', '').replace(JPGPREFIX, '').split('_')
-    print(filename, tmp, filenew, ronde, ploeg)
+    #print('R' + ronde + '_' + ploeg)
     ronde = int(ronde)
     ploeg = int(ploeg)
      
@@ -453,16 +452,16 @@ def decodeSheet(filename, outputDir, rondeCheck):
 def decodeAndSave(inputDir, outputDir, doAll, rondeCheck):
     timeID = time.strftime('%Hu%M')
     intermediate = outputDir + 'Intermediate_{}.csv'.format(timeID)
-    with open(intermediate, 'w', newline = '') as csvfile:
-        filewriter = csv.writer(csvfile, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    with open(intermediate, 'w') as csvfile:
+        filewriter = csv.writer(csvfile)
         filenames = os.listdir(inputDir)
         for count, filename in enumerate(filenames):
             if filename.endswith('.jpg') and filename.startswith(JPGPREFIX):
                 result, ronde, ploeg = decodeSheet(inputDir + filename, outputDir, rondeCheck)
                 resultnew = [ronde] + [ploeg] + result
                 filewriter.writerow(resultnew)
-                #shutil.move(inputDir + filename, PROCESSEDDIR)
-                #print('R{}_{}'.format(ronde, ploeg))
+                shutil.move(inputDir + filename, PROCESSEDDIR)
+                print('R{}_{}'.format(ronde, ploeg))
                 if doAll < 1:
                     break
     if count>0:
