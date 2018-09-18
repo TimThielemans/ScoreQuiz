@@ -140,9 +140,8 @@ class Class_Inschrijvingen():
             Yindex.append(FIELDNAMES.index('Uur'))
             Yindex.append(FIELDNAMES.index('Bonus'))
             Yindex.append(FIELDNAMES.index('Schifting'))
-            for X in range(1, len(data)):
-                for Y in Yindex:
-                    data[X][Y] = '0'
+            for Y in Yindex:
+                data[X][Y] = '0'
             with open(PLOEGINFO, 'w') as fw:
                 writer = csv.writer(fw)
                 writer.writerows(data)
@@ -311,7 +310,9 @@ class Class_Inschrijvingen():
             Y1 = FIELDNAMES.index('Schifting')
             Y2 = FIELDNAMES.index('Bonus')
             data = self.getData()
-            return float(data[X][Y1]), int(data[X][Y2])
+            if int(data[X][FIELDNAMES.index('Aangemeld')])>0:
+                return float(data[X][Y1]), int(data[X][Y2])
+            return 0, 999
         except NameError:
             raise
 

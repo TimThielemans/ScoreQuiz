@@ -61,17 +61,10 @@ class Class_Scores():
         global SUPERNR
         SUPERNR = self.RH.numberSuperRonde()
 
-    def getScore(self, ronde, ploeg, scanner=0):
-        if scanner==1:
-            filename = RONDEFILES + SCANRAW
-        else:
-            filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
-        with open(filename, 'rt') as fr:
-            reader = csv.reader(fr)
-            for i, row in enumerate(reader):
-                if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
-                    return row[2:]
-
+    
+    def getImagesDir(self):
+        return IMAGESDIR
+    
     def getScanResults(self):
          with open(RONDEFILES+SCANRAW, 'rt') as fr:
             reader = csv.reader(fr)
@@ -116,8 +109,30 @@ class Class_Scores():
                 else:
                     checkcombo.remove(combo)
         shutil.move(tmp, RONDEFILES+SCANRAW)
+
+    def getUserRondes(self):
+        files = os.listdir(RONDEFILES)
+        result = []
+        for RN, ronde in enumerate(self.RH.getRondeNames()):
+            for file in files:
+                if USERPREFIX in file and ronde in file:
+                    result.append(str(RN+1) + '_' + file.replace('.csv','').replace(USERPREFIX, ''))
+                    break;
+        return result
         
-        
+    def getScore(self, ronde, ploeg, scanner=0):
+        if scanner==1:
+            filename = RONDEFILES + SCANRAW
+        else:
+            filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
+        with open(filename, 'rt') as fr:
+            reader = csv.reader(fr)
+            next(reader)
+            for i, row in enumerate(reader):
+                if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
+                    return row[2:]
+        return []
+                
     def setScore(self, ronde, ploeg, nieuweScore, scanner=0):
         tmp = RONDEFILES + 'tmp.csv'
         if scanner==1:

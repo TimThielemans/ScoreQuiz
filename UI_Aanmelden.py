@@ -18,6 +18,7 @@ class Aanmelden(QtWidgets.QDialog):
             self.ploegnaamTxt.addItem(ploegnaam)
         self.ploegnaamTxt.setCurrentIndex(-1)
         self.ploegnaamTxt.setFocus()
+        self.updateLabel()
        
 
     def keyPressEvent(self, event):
@@ -59,11 +60,16 @@ class Aanmelden(QtWidgets.QDialog):
                             self.PH.veranderEmail(ploegnaam, email)
                     else:
                         self.msgBox(tekst + '</p>', 'Aanmelding')
+                self.updateLabel()
             else:
                 self.msgBox('Ploeg niet gevonden', 'Ongeldig')
                     
         self.ploegnaamTxt.setCurrentIndex(-1)
         self.ploegnaamTxt.setFocus()
+
+    def updateLabel(self):
+        numbers = self.PH.aantalPloegen()
+        self.aangemeldTxt.setText('{}/{}'.format(numbers[0], numbers[1]))
 
     def msgBox(self, text, titel):
         msg = QtWidgets.QMessageBox()

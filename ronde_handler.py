@@ -245,9 +245,8 @@ class Class_Rondes():
         data = self.getData()
         for i in range(0, self.aantalRondes()):
             yield data[i+1][FIELDNAMES.index('Ronde')]
-            
 
-    
+        
 #==============================DIT ZIJN INTERNE FUNCTIES ============================================
 
     def getData(self):
