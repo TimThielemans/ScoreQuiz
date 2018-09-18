@@ -134,21 +134,27 @@ class Class_Scores():
         return []
                 
     def setScore(self, ronde, ploeg, nieuweScore, scanner=0):
-        tmp = RONDEFILES + 'tmp.csv'
-        if scanner==1:
-            filename = RONDEFILES + SCANRAW
+        if ronde>0:
+            tmp = RONDEFILES + 'tmp.csv'
+            if scanner==1:
+                filename = RONDEFILES + SCANRAW
+            else:
+                filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
+            with open(filename, 'rt') as fr, open(tmp, 'w') as fw:
+                writer = csv.writer(fw)
+                reader = csv.reader(fr)
+                writer.writerow(next(reader))
+                for i, row in enumerate(reader):
+                    if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
+                        writer.writerow(row[0:2] + nieuweScore)
+                    else:
+                        writer.writerow(row)
+            shutil.move(tmp, filename)
         else:
-            filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
-        with open(filename, 'rt') as fr, open(tmp, 'w') as fw:
-            writer = csv.writer(fw)
-            reader = csv.reader(fr)
-            writer.writerow(next(reader))
-            for i, row in enumerate(reader):
-                if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
-                    writer.writerow(row[0:1] + nieuweScore)
-                else:
-                    writer.writerow(row)
-        shutil.move(tmp, filename)
+            if len(nieuweScore)>1: 
+                self.PH.setSchiftingBonus(ploeg, nieuweScore[0], nieuweScore[1])
+            else:
+                self.PH.setSchiftingBonus(ploeg, nieuweScore[0])
 
     def insertScore(self, ronde, ploeg, score, prefix):
         tmp = RONDEFILES + 'tmp.csv'

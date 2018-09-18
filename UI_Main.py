@@ -10,6 +10,7 @@ import UI_Inschrijvingen
 import UI_ScanControl
 import UI_Aanmelden
 import UI_Admin
+import UI_Aanpassen
 import decodeSheets
         
 
@@ -28,7 +29,7 @@ class startScherm(QtWidgets.QMainWindow):
             self.aanmeldenBtn.clicked.connect(lambda: UI_Aanmelden.Aanmelden(self))
             self.scansVerwerkenBtn.clicked.connect(self.scansVerwerken)
             self.scansControlerenBtn.clicked.connect(lambda: UI_ScanControl.Control(self))
-            #self.aanpassingenBtn.clicked.connect()
+            self.aanpassingenBtn.clicked.connect(lambda: UI_Aanpassen.Aanpassen(self))
             self.scorebordBtn.clicked.connect(self.scorebord)
         else:
             self.msgBox('Geen geldige directory, opgestart in default mode', 'Niet geldig')

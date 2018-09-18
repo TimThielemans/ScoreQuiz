@@ -19,16 +19,19 @@ class Aanpassen(QtWidgets.QDialog):
         self.SH = Class_Scores()
        
         self.fillComboBox()
-        self.Tafelnummer = 1
+        
         self.ronde = 0
         self.imageDir = self.SH.getImagesDir()
         self.currentRondeSettings = 99
         number = self.PH.aantalPloegen()
+        aanwezigen = self.PH.aanwezigePloegen()
+        self.AanwezigePloegen = list(map(int, aanwezigen[0]))
         self.AantalPloegen = int(number[1])
         
+        self.TNIndex = 0;
         self.updateRonde()
 
-        self.rondeBox.currentIndexChanged.connect(self.updateRonde)
+        self.rondeBox.currentIndexChanged.connect(self.nieuweRondeBox)
         self.NextBtn.clicked.connect(self.nextTafel)
         self.PreviousBtn.clicked.connect(self.previousTafel)
         self.SaveBtn.clicked.connect(self.saveScore)
@@ -46,9 +49,47 @@ class Aanpassen(QtWidgets.QDialog):
         self.rondeBox.setCurrentIndex(0)
         self.ronde = 0
 
+    def nextTafel(self):
+        if self.saveScore():
+            if self.TNIndex<len(self.AanwezigePloegen)-1:
+                self.TNIndex = self.TNIndex+1
+                self.updatePloeg()
+            else:
+                self.msgBox('Laatste ploeg', 'Dit is de laatste aanwezige ploeg')
+        
+    def previousTafel(self):
+        if self.saveScore():
+            if self.TNIndex>0:
+                self.TNIndex = self.TNIndex-1
+                self.updatePloeg()
+            else:
+                self.msgBox('Eerste ploeg', 'Dit is de eerste aanwezige ploeg')
+
+    def qrGo(self):
+        if self.saveScore():
+            try:
+                ronde, tafelnummer = map(int, self.qrcodeText.text().split('_'))
+                try:
+                    self.rondeBox.setCurrentIndex(self.comborondes.index(ronde))
+                    self.updateRonde()
+                    try:
+                        self.TNIndex = self.AanwezigePloegen.index(tafelnummer)
+                        self.updatePloeg()
+                    except:
+                        self.msgBox('Error', 'Deze ploeg is niet aanwezig')
+                except:
+                    self.msgBox('Error', 'Deze ronde werd nog niet ingegeven')
+            except:
+                self.msgBox('Error', 'Geen geldige QR-code')
+               
+            self.qrcodeText.setText('')
+
+    def nieuweRondeBox(self):
+        if self.saveScore():
+            self.updateRonde()
+
     def updateRonde(self):
-        rondetekst = self.rondeBox.currentText().split('_')
-        dictronde = self.RH.getRondeInfoDict(rondetekst[0])
+        dictronde = self.RH.getRondeInfoDict(self.comborondes[self.rondeBox.currentIndex()])
         if dictronde == '':
             self.ronde = 0
             if self.RH.numberBonusRondes()>0:
@@ -58,69 +99,54 @@ class Aanpassen(QtWidgets.QDialog):
         else:
             self.ronde = int(dictronde['RN'])
             self.NOQ = int(dictronde['Aantal'])
+        self.updatePloeg()
             
-        self.goTo(self.ronde, self.Tafelnummer)
-
-    def nextTafel(self, save=True):
-        if save:
-            self.saveScore()
-        self.Tafelnummer = self.Tafelnummer+1
-        if not self.updatePloeg(self.ronde, self.Tafelnummer):
-            if self.Tafelnummer<self.AantalPloegen:
-                self.nextTafel(False)
-            else:
-                self.msgBox('Dit is de laatste ploeg', 'Laatste ploeg')
-
-    def previousTafel(self, save=True):
-        if save:
-            self.saveScore()
-        if self.Tafelnummer>1:
-            self.Tafelnummer = self.Tafelnummer-1
-            if not self.updatePloeg(self.ronde, self.Tafelnummer):
-                self.previousTafel(False)
+    def updatePloeg(self):
+        self.Tafelnummer = self.AanwezigePloegen[self.TNIndex]
+        self.tafelnummerTxt.setText(str(self.Tafelnummer))
+        if self.ronde>0:
+            self.score = self.SH.getScore(self.ronde, self.Tafelnummer)
+            self.filename = self.imageDir + '{}_{}.jpg'.format(self.ronde, self.Tafelnummer)
+            if not len(self.score)>0:
+                self.score = [0]*self.NOQ
         else:
-            self.msgBox('Dit is de eerste ploeg', 'Eerste ploeg')
+            self.score = self.PH.getSchiftingBonus(self.Tafelnummer)
+        self.updateLayout()
 
-    def goTo(self,ronde, tafel):
-        self.saveScore()
-        self.updatePloeg(ronde, tafel)
-            
-    def updatePloeg(self, ronde, tafelnummer):
-        if ronde>0:
-            self.score = self.SH.getScore(ronde, tafelnummer)
-            if len(self.score)>0:
-                self.Tafelnummer = tafelnummer
-                self.tafelnummerTxt.setText(str(self.Tafelnummer))
-                self.ronde = ronde
-                self.filename = self.imageDir + '{}_{}.jpg'.format(ronde, tafelnummer)
-                self.updateLayout()
-                return True
-            return False
-        else:
-            self.score = self.PH.getSchiftingBonus(tafelnummer)
-            self.Tafelnummer = tafelnummer
-            self.ronde=0
-            self.updateLayout()
-            if int(self.score[1]) == 999:
-                    return False    
-            self.tafelnummerTxt.setText(str(self.Tafelnummer))
-            self.updateBoxes()
-            return True
-            
     def saveScore(self):
-        print('save Score')
+        nieuwescore = []
+        if self.ronde>0:
+            for box in self.checkboxes:
+                nieuwescore.append(int(box.isChecked()))
 
-    def qrGo(self):
-        try:
-            ronde, tafelnummer = map(int, self.qrcodeText.text().split('_'))
-            self.rondeBox.setCurrentIndex(self.comborondes.index(ronde))
-            self.Tafelnummer = tafelnummer
-            self.updateRonde()
-        except:
-            self.msgBox('Error', 'Geen geldige QR-code of ronde is nog niet ingegeven')
-           
-        self.qrcodeText.setText('')
-
+            if self.RH.isSuperRonde(self.ronde):
+                for i in range(int(len(nieuwescore)/3)):
+                    if sum(nieuwescore[i*3:i*3+3])>1:
+                        self.msgBox('Ongeldige score', 'Geen geldige invoer voor een superronde: vraag {}'.format(i+1))
+                        return False
+        else:
+            nieuwescore.append(self.schiftingTxt.text())
+            try:
+                float(nieuwescore[0])
+            except:
+                self.msgBox('Ongeldige score', 'Geen geldige schiftingsvraag!')
+                return False
+            if len(self.checkboxes)>0:
+                aantal = 0
+                bonus = 0
+                for i, box in enumerate(self.checkboxes):
+                    if box.isChecked():
+                        aantal = aantal+1
+                        bonus = i+1
+                if not aantal == 1:
+                    self.msgBox('Ongeldige score', 'Geen geldig bonusthema!')
+                    return False
+                
+        if not list(map(str,nieuwescore)) == self.score:
+            self.SH.setScore(self.ronde, self.Tafelnummer, nieuwescore)
+            
+        return True
+    
     def setImageLbl(self):
         try:
             pixmap = QtGui.QPixmap(self.filename)
@@ -148,7 +174,6 @@ class Aanpassen(QtWidgets.QDialog):
         if not self.ronde == self.currentRondeSettings:
             #updatelayout
             self.checkboxes = []
-            print('updateLayout')
             self.NOQ = len(self.score)
             try:
                 self.superronde = self.RH.isSuperRonde(self.ronde)

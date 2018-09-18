@@ -1881,6 +1881,9 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="text">
             <string>&lt;</string>
            </property>
@@ -1907,6 +1910,9 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="text">
             <string>&gt;</string>
            </property>
@@ -1927,6 +1933,9 @@
          </item>
          <item>
           <widget class="QPushButton" name="SaveBtn">
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="text">
             <string>Update</string>
            </property>
