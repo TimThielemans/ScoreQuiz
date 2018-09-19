@@ -47,7 +47,6 @@ class Inschrijving(QtWidgets.QDialog):
             self.EmailTxt.setText('')
             
         except NameError:
-            raise
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setText("Deze ploegnaam is al ingebruikt, inschrijving dus niet verwerkt!")
