@@ -38,6 +38,8 @@ def readSettings():
     global BOX_OFFSETYBONUS
     global BOX_SPACINGYBONUS
     global BOX_OFFSETXBONUS
+    global BOX_OFFSETXMISTAKE
+    global BOX_OFFSETYMISTAKE
     global HR
     global HP
     
@@ -54,6 +56,8 @@ def readSettings():
     BOX_OFFSETYBONUS = 0
     BOX_OFFSETXBONUS = 0
     BOX_SPACINGYBONUS = 0
+    BOX_OFFSETYMISTAKE = 0
+    BOX_OFFSETXMISTAKE = 0
 
     WIDTH = 0
     HEIGTH = 0
@@ -266,7 +270,7 @@ def get_bonus_patch(transf, q_number):
     return transf[tl[1]:br[1], tl[0]:br[0]]
 
 def getMistakePatch(transf):
-    percentage - 0,85
+    percentage = 0.85
     tl = [BOX_OFFSETXMISTAKE-BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE-BOX_SIZE/2*percentage]
     # Bottom right
     br = [BOX_OFFSETXMISTAKE+BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE+BOX_SIZE/2*percentage]
@@ -311,9 +315,7 @@ def is_marked(question_patch):
         return 1
 
 def checkMistakeField(image):
-
-    
-    
+    checkpatch = getMistakePatch(image)
     return is_marked(checkpatch)
     
 def get_answers(transf):
@@ -418,8 +420,8 @@ def setSheetSettings(sheetNumber, bonusRondes=0):
                 BOX_SPACINGX = float(row['BoxSpacingX'])*UPSIZING
                 BOX_OFFSETY = float(row['BoxOffsetY'])*UPSIZING
                 BOX_OFFSETX = float(row['BoxOffsetX'])*UPSIZING
-                BOX_OFFSETXMISTAKE= float(row['BoxOffsetXMistake'])*UPSIZING
-                BOX_OFFSETYMISTAKE = = float(row['BoxOffsetXYMistake'])*UPSIZING
+                BOX_OFFSETXMISTAKE = float(row['BoxOffsetXMistake'])*UPSIZING
+                BOX_OFFSETYMISTAKE = float(row['BoxOffsetYMistake'])*UPSIZING
                 NOQ = int(row['Aantal'])
 
                 if bonusRondes>0:
@@ -455,7 +457,7 @@ def decodeSheet(filename, outputDir, rondeCheck):
        # print(time.time()-a)
         answers, im = get_answers(image)
         #print(time.time()-a)
-        check = checkMistakeField()
+        check = checkMistakeField(image)
     else:
         #decoding van shiftingsvraag en eventueel bonusthema
         if not ronde == RONDESETTINGS:
@@ -475,7 +477,7 @@ def decodeSheet(filename, outputDir, rondeCheck):
             bonus, im = decodeBonus(im)
             answers.append(bonus)
 
-        check = checkMistakeField()
+        check = checkMistakeField(image)
 
     cv2.imwrite(OUTPUTIMAGES + '{}_{}.jpg'.format(ronde,ploeg), im)
 

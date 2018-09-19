@@ -36,22 +36,55 @@ class Control(QtWidgets.QMainWindow):
             msg.exec()
 
     def allesOverzetten(self):
-        bereik = range(self.ScanDataIndex, len(self.AllScanData))
+        #Laatste Aanpassing
+        if self.ScanDataIndex == 0:
+            bereik = range(self.ScanDataIndex+1, len(self.AllScanData))
+        else:
+            bereik = range(self.ScanDataIndex, len(self.AllScanData))
+
+            
+        self.toCheck = []
         for i in bereik:
-            self.nextFile()
-        self.allChecked(True)
+            row = self.AllScanData[i]
+            row = row[0]
+            if int(row[2]) == 0:
+                self.ScanDataIndex = i
+                if not self.nextFile(True):
+                    self.toCheck.append(row)
+            else:
+                self.toCheck.append(row)
         
-    def nextFile(self):
+        if len(self.toCheck) == 0:
+            self.allChecked(True)
+        else:
+            print(self.toCheck)
+           # self.SH.fromScannerToUser()
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Er zijn nog een paar scans die manueel nagekeken moeten worden")
+            msg.setWindowTitle("Bijna klaar!")
+            msg.exec()
+            self.setup()
+        
+    def nextFile(self, automatic = False):
         if self.updateScore():
             newRow = [self.ronde] + [self.ploeg] + self.score
             self.SH.validateScanResult(newRow)
-            self.ScanDataIndex = self.ScanDataIndex+1
+            if not automatic:
+                self.ScanDataIndex = self.ScanDataIndex+1
             if self.ScanDataIndex<len(self.AllScanData):
                 self.updateFile()
                 self.setImageLbl()
                 self.updateLayout()
-            else:
+            elif not automatic:
                 self.allChecked(True)
+            return True
+        else:
+            if not automatic:
+                msg = QtWidgets.QMessageBox()
+                msg.setText("Geen geldige score, kijk het nog eens na")
+                msg.setWindowTitle("Ongeldig")
+                msg.exec()
+            return False
     
     def updateFile(self):
         data = self.AllScanData[self.ScanDataIndex]
@@ -59,7 +92,7 @@ class Control(QtWidgets.QMainWindow):
         self.row = data[0]
         self.ploeg = int(self.row[1])
         self.ronde = int(self.row[0])
-        self.score = self.row[2:]
+        self.score = self.row[3:]
         
     def setImageLbl(self):
         try:
@@ -137,10 +170,6 @@ class Control(QtWidgets.QMainWindow):
                 update = False
 
         if checked and not update:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("Dit kan niet kloppen! Eerst aanpassen alvorens door te gaan")
-            msg.setWindowTitle("Ongeldige score")
-            msg.exec()
             return False
         if update and changed:
             self.score = nieuwescore
@@ -160,7 +189,7 @@ class Control(QtWidgets.QMainWindow):
         else:
             self.schiftingTxt.setText(self.score[0])
             if self.NOQ == 2:
-                bonusthema - int(self.score[1])
+                bonusthema = int(self.score[1])
                 for i, box in enumerate(self.checkboxes):
                     box.setChecked(i+1==bonusthema)
         
