@@ -212,23 +212,35 @@ def get_processedImage(source_file):
         - Find 'outmost' points of all corners
         - Apply perpsective transform to get a bird's eye view
     """
-
+    b = time.time()
     im_orig = cv2.imread(source_file)
+    #print('reading' + str(time.time()-b))
+    heigth, width = im_orig.shape[0:2]
     
-    blurred = cv2.GaussianBlur(im_orig, (11, 11), 10)
-    
-    im = normalize(cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY))
+    if not JPGPREFIX + '0_' in source_file:
+        im_orig = im_orig[0.07*heigth:0.93*heigth, 0.65*width:0.98*width]
+        #print('cut' + str(time.time()-b))
+    else:
+        #schiftingsformulier heeft andere marges
+        im_orig = im_orig[0.2*heigth:0.9*heigth, 0.2*width:0.9*width]
+        
+        
+  #  blurred = cv2.GaussianBlur(im_orig, (11, 11), 10)    
+    #print('blur' + str(time.time()-b))
+    im = normalize(cv2.cvtColor(im_orig, cv2.COLOR_BGR2GRAY))
+    #print('norm' + str(time.time()-b))
 
     ret, im = cv2.threshold(im, 127, 255, cv2.THRESH_BINARY)
-    
+    #print('treshold' + str(time.time()-b))
     contours = get_contours(im)
+    #print('contours' + str(time.time()-b))
     corners = get_corners(contours)
-
+    #print('corners' + str(time.time()-b))
     outmost = order_points(get_outmost_points(corners))
-
+    #print('orderpoints' + str(time.time()-b))
     transf = perspective_transform(im_orig, outmost)
-    
-    #cv2.imwrite('debug/2blurred.jpg', blurred)
+    #print('transform' + str(time.time()-b))
+    #cv2.imwrite(QUIZFOLDER + 'debug/2blurred.jpg', im_orig)
     #cv2.imwrite('debug/4treshold.jpg', im)
     #cv2.drawContours(im_orig, corners, -1, (0, 255, 0), 3)
     #cv2.imwrite('debug/1original.jpg', im_orig)
@@ -251,6 +263,13 @@ def get_bonus_patch(transf, q_number):
     tl = [BOX_OFFSETXBONUS-BOX_SIZE/2*percentage, BOX_OFFSETYBONUS-BOX_SIZE/2*percentage+BOX_SPACINGYBONUS*q_number]
     # Bottom right
     br = [BOX_OFFSETXBONUS+BOX_SIZE/2*percentage, BOX_OFFSETYBONUS+BOX_SIZE/2*percentage+BOX_SPACINGYBONUS*q_number]
+    return transf[tl[1]:br[1], tl[0]:br[0]]
+
+def getMistakePatch(transf):
+    percentage - 0,85
+    tl = [BOX_OFFSETXMISTAKE-BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE-BOX_SIZE/2*percentage]
+    # Bottom right
+    br = [BOX_OFFSETXMISTAKE+BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE+BOX_SIZE/2*percentage]
     return transf[tl[1]:br[1], tl[0]:br[0]]
 
 def get_question_patches(transf):
@@ -290,6 +309,12 @@ def is_marked(question_patch):
     else:
        # print('1: ' + str(means))
         return 1
+
+def checkMistakeField(image):
+
+    
+    
+    return is_marked(checkpatch)
     
 def get_answers(transf):
     answers = []
@@ -380,6 +405,8 @@ def setSheetSettings(sheetNumber, bonusRondes=0):
     global BOX_OFFSETYBONUS
     global BOX_SPACINGYBONUS
     global BOX_OFFSETXBONUS
+    global BOX_OFFSETXMISTAKE
+    global BOX_OFFSETYMISTAKE
     with open(SHEETINFO, mode='rt') as fr:
         reader = csv.DictReader(fr)
         for row in reader:
@@ -391,6 +418,8 @@ def setSheetSettings(sheetNumber, bonusRondes=0):
                 BOX_SPACINGX = float(row['BoxSpacingX'])*UPSIZING
                 BOX_OFFSETY = float(row['BoxOffsetY'])*UPSIZING
                 BOX_OFFSETX = float(row['BoxOffsetX'])*UPSIZING
+                BOX_OFFSETXMISTAKE= float(row['BoxOffsetXMistake'])*UPSIZING
+                BOX_OFFSETYMISTAKE = = float(row['BoxOffsetXYMistake'])*UPSIZING
                 NOQ = int(row['Aantal'])
 
                 if bonusRondes>0:
@@ -420,13 +449,13 @@ def decodeSheet(filename, outputDir, rondeCheck):
             SUPERRONDE = int(HR.isSuperRonde(ronde))
             if not ANSWERSHEET == newAnswerSheet:
                 setSheetSettings(newAnswerSheet)
-                
+
+        #a = time.time()
         image = get_processedImage(filename)
+       # print(time.time()-a)
         answers, im = get_answers(image)
-
-        
-    
-
+        #print(time.time()-a)
+        check = checkMistakeField()
     else:
         #decoding van shiftingsvraag en eventueel bonusthema
         if not ronde == RONDESETTINGS:
@@ -437,17 +466,21 @@ def decodeSheet(filename, outputDir, rondeCheck):
                 else:
                     setSheetSettings(1, 0)      
         answers = []
+        #a = time.time()
         image = get_processedImage(filename)
+        #print(time.time()-a)
         schifting, im = decodeShifting(image)
         answers.append(schifting)
         if HR.numberBonusRondes()>0:
             bonus, im = decodeBonus(im)
             answers.append(bonus)
 
+        check = checkMistakeField()
+
     cv2.imwrite(OUTPUTIMAGES + '{}_{}.jpg'.format(ronde,ploeg), im)
 
     
-    return answers, ronde, ploeg
+    return answers, ronde, ploeg, check
 
 def decodeAndSave(inputDir, outputDir, doAll, rondeCheck):
     timeID = time.strftime('%Hu%M')
@@ -457,21 +490,23 @@ def decodeAndSave(inputDir, outputDir, doAll, rondeCheck):
         filenames = os.listdir(inputDir)
         for count, filename in enumerate(filenames):
             if filename.endswith('.jpg') and filename.startswith(JPGPREFIX):
-                result, ronde, ploeg = decodeSheet(inputDir + filename, outputDir, rondeCheck)
-                resultnew = [ronde] + [ploeg] + result
+                result, ronde, ploeg, check = decodeSheet(inputDir + filename, outputDir, rondeCheck)
+                resultnew = [ronde] + [ploeg] + [check] + result
                 filewriter.writerow(resultnew)
-                shutil.move(inputDir + filename, PROCESSEDDIR)
+                #shutil.move(inputDir + filename, PROCESSEDDIR)
                 print('R{}_{}'.format(ronde, ploeg))
                 if doAll < 1:
                     break
-    if count>0:
-        finalFilename = outputDir + SCANRAW    
-        with open(intermediate, mode='rt') as f, open(finalFilename, 'a+') as final:
-            writer = csv.writer(final, delimiter=',')
-            reader = csv.reader(f, delimiter=',')
-            sorted2 = sorted(reader, key = lambda row: (int(row[0]), int(row[1])))
-            for count, row in enumerate(sorted2):
-                writer.writerow(row)
+
+    finalFilename = outputDir + SCANRAW    
+    with open(intermediate, mode='rt') as f, open(finalFilename, 'a+') as final:
+        writer = csv.writer(final, delimiter=',')
+        reader = csv.reader(f, delimiter=',')
+        sorted2 = sorted(reader, key = lambda row: (int(row[0]), int(row[1])))
+        for count, row in enumerate(sorted2):
+            writer.writerow(row)
+
+    count = count+1
 
     try:
         os.remove(intermediate)

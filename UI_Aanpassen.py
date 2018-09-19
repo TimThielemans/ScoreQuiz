@@ -164,11 +164,9 @@ class Aanpassen(QtWidgets.QDialog):
         else:
             self.schiftingTxt.setText(str(self.score[0]))
             if self.NOQ == 2:
+                bonusthema = int(self.score[1])
                 for i, box in enumerate(self.checkboxes):
-                    if i == int(self.score[1])-1:
-                        box.setChecked(1)
-                    else:
-                        box.setChecked(0)
+                    box.setChecked(i+1==bonusthema)
         
     def updateLayout(self):
         if not self.ronde == self.currentRondeSettings:
