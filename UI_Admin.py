@@ -129,7 +129,7 @@ class AdminUI(QtWidgets.QDialog):
                     self.EH.sendBetalingReminder(ploeginfo)
 
     def emailQRLastDay(self):
-        if self.questionBox('Zeker?', 'Zeker dat je de laatste info wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+        if self.questionBox('Zeker?', 'Zeker dat je echt de laatste info wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
             for ploeginfo in self.PH.getPloegenDict():
                 self.EH.sendWrapUp(ploeginfo)
 

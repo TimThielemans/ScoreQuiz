@@ -8,7 +8,20 @@ class Control(QtWidgets.QMainWindow):
         self.setWindowTitle('Scans controleren')
         self.show()
         self.setup()
-            
+
+        self.nextBtn.clicked.connect(self.nextFile)
+        self.updateScoreBtn.clicked.connect(self.updateScore)
+        self.allesJustBtn.clicked.connect(self.allesOverzetten)
+
+    def closeEvent(self, event):
+        self.SH.fromScannerToUser()
+        if len(self.SH.getAllScanResults())>0:
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Nog niet alle scans werden gecontroleerd")
+            msg.setWindowTitle("Opgelet")
+            msg.exec()
+        event.accept()
+        
     def setup(self):
         from score_handler import Class_Scores
         from ronde_handler import Class_Rondes
@@ -26,9 +39,7 @@ class Control(QtWidgets.QMainWindow):
             self.updateFile()
             self.updateLayout()
             self.setImageLbl()
-            self.nextBtn.clicked.connect(self.nextFile)
-            self.updateScoreBtn.clicked.connect(self.updateScore)
-            self.allesJustBtn.clicked.connect(self.allesOverzetten)
+            
         else:
             msg = QtWidgets.QMessageBox()
             msg.setText("Alle beschikbare scans zijn gecontroleerd dus je kan hier niets mee doen...")
@@ -37,53 +48,51 @@ class Control(QtWidgets.QMainWindow):
 
     def allesOverzetten(self):
         #Laatste Aanpassing
-        if self.ScanDataIndex == 0:
-            bereik = range(self.ScanDataIndex+1, len(self.AllScanData))
-        else:
-            bereik = range(self.ScanDataIndex, len(self.AllScanData))
+        
+        bereik = range(self.ScanDataIndex, len(self.AllScanData))
 
-            
         self.toCheck = []
         for i in bereik:
             row = self.AllScanData[i]
             row = row[0]
             if int(row[2]) == 0:
                 self.ScanDataIndex = i
-                if not self.nextFile(True):
-                    self.toCheck.append(row)
+                self.iterateAll()
             else:
                 self.toCheck.append(row)
         
         if len(self.toCheck) == 0:
             self.allChecked(True)
         else:
-            print(self.toCheck)
-           # self.SH.fromScannerToUser()
+            self.SH.fromScannerToUser()
             msg = QtWidgets.QMessageBox()
             msg.setText("Er zijn nog een paar scans die manueel nagekeken moeten worden")
             msg.setWindowTitle("Bijna klaar!")
             msg.exec()
             self.setup()
+
+    def iterateAll(self):
+        self.updateFile()
+        newRow = [self.ronde] + [self.ploeg] + self.score
+        self.SH.validateScanResult(newRow)
         
-    def nextFile(self, automatic = False):
+    def nextFile(self):
         if self.updateScore():
             newRow = [self.ronde] + [self.ploeg] + self.score
             self.SH.validateScanResult(newRow)
-            if not automatic:
-                self.ScanDataIndex = self.ScanDataIndex+1
+            self.ScanDataIndex = self.ScanDataIndex+1
             if self.ScanDataIndex<len(self.AllScanData):
                 self.updateFile()
                 self.setImageLbl()
                 self.updateLayout()
-            elif not automatic:
+            else:
                 self.allChecked(True)
             return True
         else:
-            if not automatic:
-                msg = QtWidgets.QMessageBox()
-                msg.setText("Geen geldige score, kijk het nog eens na")
-                msg.setWindowTitle("Ongeldig")
-                msg.exec()
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Geen geldige score, kijk het nog eens na")
+            msg.setWindowTitle("Ongeldig")
+            msg.exec()
             return False
     
     def updateFile(self):
@@ -114,10 +123,7 @@ class Control(QtWidgets.QMainWindow):
         changed = False
         if self.ronde>0 and self.superronde == 1:
             for box in self.checkboxes:
-                if box.isChecked():
-                    score.append(1)
-                else:
-                    score.append(0)
+                score.append(int(box.isChecked()))
             checked = True
             update = True
             for i in range(int(len(score)/3)):

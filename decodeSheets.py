@@ -303,6 +303,8 @@ def draw_mistake(question_patch):
     cx = int(BOX_SIZE/2)
     cy = int(BOX_SIZE/2)
     draw_point((cx, cy), question_patch, radius=3, color=(0, 100, 255))
+    global MISTAKEMADE
+    MISTAKEMADE = 1
 
 def is_marked(question_patch):
     means = np.mean(question_patch)
@@ -316,7 +318,10 @@ def is_marked(question_patch):
 
 def checkMistakeField(image):
     checkpatch = getMistakePatch(image)
-    return is_marked(checkpatch)
+    mistake = is_marked(checkpatch)
+    if mistake:
+        draw_mistake(checkpatch)
+    return mistake
     
 def get_answers(transf):
     answers = []
@@ -442,6 +447,8 @@ def decodeSheet(filename, outputDir, rondeCheck):
      
     global RONDESETTINGS
     global SUPERRONDE
+    global MISTAKEMADE
+    MISTAKEMADE = 0
 
     if ronde>0:
         #decoding van een ronde
@@ -456,8 +463,6 @@ def decodeSheet(filename, outputDir, rondeCheck):
         image = get_processedImage(filename)
        # print(time.time()-a)
         answers, im = get_answers(image)
-        #print(time.time()-a)
-        check = checkMistakeField(image)
     else:
         #decoding van shiftingsvraag en eventueel bonusthema
         if not ronde == RONDESETTINGS:
@@ -477,8 +482,8 @@ def decodeSheet(filename, outputDir, rondeCheck):
             bonus, im = decodeBonus(im)
             answers.append(bonus)
 
-        check = checkMistakeField(image)
-
+    checkMistakeField(image)
+    check = MISTAKEMADE
     cv2.imwrite(OUTPUTIMAGES + '{}_{}.jpg'.format(ronde,ploeg), im)
 
     

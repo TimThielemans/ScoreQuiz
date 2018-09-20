@@ -215,7 +215,7 @@ class Class_Scores():
 
         bonusScore = []
         for i in range(0, len(BONUSTHEMAS)):
-            self.PH.setBonusses([i]*len(origineleBonusThemas))
+            self.PH.setBonusses([i+1]*len(origineleBonusThemas))
             self.makeFinal()
             score, maximum = self.calculateBonusScore()
             bonusScore.append(score)
@@ -367,7 +367,8 @@ class Class_Scores():
         for bestand in ontbrekendeBestanden:
             ronde = list(map(int,bestand.split('_')))
             NOQ, SUPER = self.RH.getVragenSuper(ronde[0])
-            self.insertScore(ronde[0], ronde[1], [0]*NOQ*(1+2*SUPER), FINALPREFIX)
+            bonus = self.RH.isBonusRonde(ronde[0])
+            self.insertScore(ronde[0], ronde[1], [0]*(NOQ*(1+2*SUPER)+bonus), FINALPREFIX)
             
         return ontbrekendeBestanden, nietAanwezigeInvoer
 
@@ -559,6 +560,8 @@ class Class_Scores():
                     ploegdata.append(row['Score'])
 
                 vorigePloeg = int(row['TN'])
+
+            #moet dat hier staan?
 
             ploegdata[3] = sum(map(int,ploegdata[5:]))
             ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
