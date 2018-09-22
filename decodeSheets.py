@@ -42,6 +42,9 @@ def readSettings():
     global BOX_OFFSETYMISTAKE
     global HR
     global HP
+    global EMPTYSCANRAW
+
+    EMPTYSCANRAW = True
     
     NOQ = 0
     SUPERRONDE = 0
@@ -70,6 +73,7 @@ def readSettings():
         config.read('settings.ini')
 
         global RONDEINFO
+        global BOXPERCENT
         global DEFAULT_OUTPUTDIR
         global DEFAULT_INPUTDIR
         global SCANRAW
@@ -80,10 +84,11 @@ def readSettings():
         global SHEETINFO
         global UPSIZING
         global QUIZFOLDER
+        global SCHIFTINGDIGITS
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
-        
-        
+        BOXPERCENT = float(config.get('COMMON', 'BOXPERCENT'))
+        SCHIFTINGDIGITS = int(config.get('COMMON', 'SCHIFTINGDIGITS'))
         SCANRAW = config.get("COMMON","SCANRAW")
         DEFAULT_OUTPUTDIR = QUIZFOLDER + config.get("PATHS", "RONDEFILES")
         OUTPUTIMAGES = QUIZFOLDER + config.get('PATHS', 'OUTPUTIMAGES')
@@ -159,7 +164,7 @@ def features_distance(f1, f2):
 # Default mutable arguments should be harmless here
 def draw_point(point, img, radius=5, color=(0, 0, 255)):
     cv2.circle(img, tuple(point), radius, color, -1)
- #   cv2.rectangle(img, (0,0), (int(BOX_SIZE), int(BOX_SIZE)), 120, -1)
+    #cv2.rectangle(img, (0,0), (int(BOX_SIZE), int(BOX_SIZE)), 120, -1)
 
 
 def get_centroid(contour):
@@ -254,7 +259,7 @@ def get_processedImage(source_file):
     return transf
 
 def get_question_patch(transf, q_number, super_index):
-    percentage = 0.85
+    percentage = BOXPERCENT
     # Top left
     tl = [BOX_OFFSETX-BOX_SIZE/2*percentage+BOX_SPACINGX*super_index, BOX_OFFSETY-BOX_SIZE/2*percentage+BOX_SPACINGY*q_number]
     # Bottom right
@@ -262,7 +267,7 @@ def get_question_patch(transf, q_number, super_index):
     return transf[tl[1]:br[1], tl[0]:br[0]]
 
 def get_bonus_patch(transf, q_number):
-    percentage = 0.85
+    percentage = BOXPERCENT
     # Top left
     tl = [BOX_OFFSETXBONUS-BOX_SIZE/2*percentage, BOX_OFFSETYBONUS-BOX_SIZE/2*percentage+BOX_SPACINGYBONUS*q_number]
     # Bottom right
@@ -270,7 +275,7 @@ def get_bonus_patch(transf, q_number):
     return transf[tl[1]:br[1], tl[0]:br[0]]
 
 def getMistakePatch(transf):
-    percentage = 0.85
+    percentage = BOXPERCENT
     tl = [BOX_OFFSETXMISTAKE-BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE-BOX_SIZE/2*percentage]
     # Bottom right
     br = [BOX_OFFSETXMISTAKE+BOX_SIZE/2*percentage, BOX_OFFSETYMISTAKE+BOX_SIZE/2*percentage]
@@ -294,17 +299,18 @@ def get_bonus_patches(transf):
     for i in range(0,9):
         yield get_bonus_patch(transf, i)
 
-def draw_marked(question_patch):
-    cx = int(BOX_SIZE/2)
-    cy = int(BOX_SIZE/2)
-    draw_point((cx, cy), question_patch, radius=3, color=(0, 255, 0))
+##def draw_marked(question_patch):
+##    cx = int(BOX_SIZE/2)
+##    cy = int(BOX_SIZE/2)
+##    draw_point((cx, cy), question_patch, radius=3, color=(0, 255, 0))
 
-def draw_mistake(question_patch):
-    cx = int(BOX_SIZE/2)
-    cy = int(BOX_SIZE/2)
-    draw_point((cx, cy), question_patch, radius=3, color=(0, 100, 255))
-    global MISTAKEMADE
-    MISTAKEMADE = 1
+def draw_marked(question_patch, color=(0, 100, 255), alpha = 0.2):
+    overlay = question_patch.copy()
+    cv2.rectangle(overlay, (0,0), (int(BOX_SIZE), int(BOX_SIZE)), color, -1)
+    cv2.addWeighted(overlay, alpha, question_patch, 1 - alpha, 0, question_patch)
+    if color == (0, 100, 255):
+        global MISTAKEMADE
+        MISTAKEMADE = 1
 
 def is_marked(question_patch):
     means = np.mean(question_patch)
@@ -316,11 +322,13 @@ def is_marked(question_patch):
        # print('1: ' + str(means))
         return 1
 
-def checkMistakeField(image):
+def checkMistakeField(image):   
     checkpatch = getMistakePatch(image)
     mistake = is_marked(checkpatch)
     if mistake:
-        draw_mistake(checkpatch)
+        draw_marked(checkpatch,  alpha = 0.5, color = (0, 20, 255))
+        global MISTAKEMADE
+        MISTAKEMADE = 1
     return mistake
     
 def get_answers(transf):
@@ -330,19 +338,24 @@ def get_answers(transf):
     for i, q_patch in enumerate(get_question_patches(transf)):
         checked = is_marked(q_patch)
 
-        if checked is 1:
-            draw_marked(q_patch)
+        if checked is 1 and SUPERRONDE ==0:
+            draw_marked(q_patch, color = (0, 255, 0))
 
         if SUPERRONDE == 1:
-            if i%3 == 0 and i>1:
+            superpatches.append(q_patch)
+            superanswers.append(checked)
+            if i%3 == 2:
                 if (sum(superanswers)>1):
                     for j in range(0,3):
                         if superanswers[j] == 1:
-                            draw_mistake(superpatches[j])
+                            draw_marked(superpatches[j])
+                else:
+                    for j in range(0,3):
+                        if superanswers[j] == 1:
+                            draw_marked(superpatches[j],  color=(0, 255, 0))
                 superpatches = []
                 superanswers = []
-            superpatches.append(q_patch)
-            superanswers.append(checked)
+            
             
         answers.append(checked)
        # cv2.imwrite('debug/patch{}.jpg'.format(i+1), q_patch)
@@ -351,15 +364,15 @@ def get_answers(transf):
 
 def decodeShifting(transf):
     schifting = ''
-    for j in range(0, 4):
+    for j in range(0, SCHIFTINGDIGITS):
         answers = []
         patches = []
         newdigit = '0' 
         for i, q_patch in enumerate(get_schifting_patches(transf, j)):
             checked = is_marked(q_patch)
 
-            if checked is 1:
-                draw_marked(q_patch)
+            if checked is 1 and sum(answers)==0:
+                draw_marked(q_patch, color = (0, 255, 0))
                 newdigit  = str(i)
             patches.append(q_patch)
             answers.append(checked)
@@ -367,10 +380,10 @@ def decodeShifting(transf):
         if sum(answers)>1:
             for k in range(0, len(answers)):
                 if answers[k] == 1:
-                    draw_mistake(patches[k])
+                    draw_marked(patches[k])
         elif sum(answers) == 0:
             for k in range(0, len(answers)):
-                draw_mistake(patches[k])
+                draw_marked(patches[k])
         schifting+=newdigit
     return schifting, transf
                     
@@ -382,8 +395,8 @@ def decodeBonus(transf):
     for i, q_patch in enumerate(get_bonus_patches(transf)):
         checked = is_marked(q_patch)
 
-        if checked is 1:
-            draw_marked(q_patch)
+        if checked is 1 and sum(answers)==0:
+            draw_marked(q_patch, color = (0, 255, 0))
             bonus = i+1
         patches.append(q_patch)
         answers.append(checked)
@@ -391,10 +404,10 @@ def decodeBonus(transf):
     if sum(answers)>1:
         for k in range(0, len(answers)):
             if answers[k] == 1:
-                draw_mistake(patches[k])
+                draw_marked(patches[k])
     elif sum(answers) == 0:
         for k in range(0, len(answers)):
-            draw_mistake(patches[k])
+            draw_marked(patches[k])
 
     return bonus, transf
 
@@ -489,7 +502,30 @@ def decodeSheet(filename, outputDir, rondeCheck):
     
     return answers, ronde, ploeg, check
 
+def deleteIfPresent(ronde, ploeg):
+    tmp = 'tmp.csv'
+    with open(DEFAULT_OUTPUTDIR + SCANRAW, 'r') as fr,open(tmp, 'w') as fw:
+        reader = csv.reader(fr)
+        writer = csv.writer(fw)
+        for row in reader:
+            if not (row[0] == str(ronde) and row[1] == str(ploeg)):
+                writer.writerow(row)
+    shutil.move(tmp, DEFAULT_OUTPUTDIR + SCANRAW)
+
+def isScanRawEmpty():
+    global EMPTYSCANRAW
+    try:
+        with open(DEFAULT_OUTPUTDIR + SCANRAW, 'r') as fr:
+            reader = csv.reader(fr)
+            if len(list(reader))>0:
+                EMPTYSCANRAW = False
+            else:
+                EMPTYSCANRAW = True
+    except:
+        EMPTYSCANRAW = True
+
 def decodeAndSave(inputDir, outputDir, doAll, rondeCheck):
+    isScanRawEmpty()
     timeID = time.strftime('%Hu%M')
     intermediate = outputDir + 'Intermediate_{}.csv'.format(timeID)
     with open(intermediate, 'w') as csvfile:
@@ -498,9 +534,17 @@ def decodeAndSave(inputDir, outputDir, doAll, rondeCheck):
         for count, filename in enumerate(filenames):
             if filename.endswith('.jpg') and filename.startswith(JPGPREFIX):
                 result, ronde, ploeg, check = decodeSheet(inputDir + filename, outputDir, rondeCheck)
+                if not EMPTYSCANRAW:
+                    deleteIfPresent(ronde, ploeg)
+                if int(ploeg) == 999:
+                    check = 1
                 resultnew = [ronde] + [ploeg] + [check] + result
                 filewriter.writerow(resultnew)
-                #shutil.move(inputDir + filename, PROCESSEDDIR)
+                try:
+                    os.remove(PROCESSEDDIR +'/' + filename)
+                except:
+                    pass
+                shutil.move(inputDir + filename, PROCESSEDDIR)
                 print('R{}_{}'.format(ronde, ploeg))
                 if doAll < 1:
                     break

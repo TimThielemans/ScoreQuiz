@@ -36,6 +36,24 @@ class startScherm(QtWidgets.QMainWindow):
 
         from score_handler import Class_Scores
         self.SH = Class_Scores()
+
+    def keyPressEvent(self, event):
+        if type(event)==QtGui.QKeyEvent:
+            if event.key()==QtCore.Qt.Key_Escape:
+                self.close()
+            elif event.key()==QtCore.Qt.Key_A:
+                UI_Aanmelden.Aanmelden(self)
+            elif event.key()==QtCore.Qt.Key_D:
+                self.admin()
+            elif event.key()==QtCore.Qt.Key_O:
+                self.scorebord()
+            elif event.key()==QtCore.Qt.Key_C:
+                UI_ScanControl.Control(self)
+            elif event.key()==QtCore.Qt.Key_N:
+                UI_Inschrijvingen.Inschrijving(self)
+            event.accept()
+        else:
+            event.ignore() 
         
     def selectDir(self):
         filename = 'settings.ini'
@@ -44,7 +62,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 1
+        debug = 0
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()
@@ -101,11 +119,14 @@ class startScherm(QtWidgets.QMainWindow):
     def scorebord(self):
         qm = QtWidgets.QMessageBox()
         answer = qm.question(QtWidgets.QDialog(), 'Bonus berekening', 'Bereken ook de optimale bonus? (enkel eenmaal bij de eindstand)', qm.Yes | qm.No)
-        geenBonus, ontbreekt, fout = self.SH.generateScorebord(answer == qm.Yes)
+        geenBonus, geenSchifting, ontbreekt, fout = self.SH.generateScorebord(answer == qm.Yes)
         fouten = False
         info = ''
         if len(geenBonus)>0:
             info = info + '\nGeen BonusThema: {}'.format(geenBonus)
+            fouten = True
+        if len(geenSchifting)>0:
+            info = info + '\nGeen Schifting: {}'.format(geenSchifting)
             fouten = True
         if len(ontbreekt)>0:
             info = info + '\nOntbrekende files: {}'.format(ontbreekt)

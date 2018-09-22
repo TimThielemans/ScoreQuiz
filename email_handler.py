@@ -121,7 +121,7 @@ class Class_Emails():
         pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
-        #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
 
     def sendBetalingReminder(self, ploeginfo):
@@ -131,7 +131,7 @@ class Class_Emails():
         onderwerp = 'Herinnering betaling 6e Q@C Sinterklaasquiz'
         template = open(EMAILBETALINGSHERINNERING).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
-        #self.EH.send_HTML_Mail(email, onderwerp, tekst)
+        self.EH.send_HTML_Mail(email, onderwerp, tekst)
         print(email)
 
 
@@ -149,7 +149,7 @@ class Class_Emails():
 
         template = open(EMAILLASTINFO).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, BETALINGTEKST = mededeling)
-        #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
         
     def sendUitnodigingen(self, minimum):
@@ -262,8 +262,7 @@ class Class_Emails():
             eindstandPloeg = self.SH.getFinalScore(pos)
             ploegnaam = eindstandPloeg['Ploegnaam']
             tafelnummer = eindstandPloeg['TN']
-            ploegInfo = self.PH.getPloegInfo(ploegnaam)
-            email = ploegInfo['Email']
+            email = self.PH.getEmail(ploegnaam)
             onderwerp = 'Evaluatie en Score 6e Q@C Sinterklaasquiz'
             #AANPASSEN naar geland wat de schiftingsvraag was
             schifting = str(SCHIFTING) + ' gram'
@@ -276,7 +275,7 @@ class Class_Emails():
             
             template = open(EMAILEINDSTAND).read()
             tekst = template.format(PLOEGNAAM = ploegnaam, EINDPOSITIE = positie, AANTALDEELNEMERS = aantalDeelnemers, MOEILIJK = MOEILIJKTRESHOLD*100, BONUSTEKST = bonusTekst, SCHIFTINGSANTWOORD = schifting, EIGENOVERZICHT = rondescores, EINDSTANDNABIJ = eindstand, SCOREWINNAARS = winnaars)
-            #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
+            self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
             print(pos, email)
 
     def generateBonusTekst(self, ploegnaam):
@@ -383,14 +382,27 @@ class Class_Emails():
         for index, file in enumerate(filenames):
             with open(file, 'rt') as fr:
                 reader =csv.reader(fr)
+                if 'Bonus' in next(reader):
+                    compensatieBonus = 1
+                else:
+                    compensatieBonus = 0
+                if self.RH.isSuperRonde(rondenummer[index]) == 1:
+                    superronde = True
+                else:
+                    superronde = False
                 for row in reader:
                     if 'Max/Gem' in row:
                         aantalJuist = row[2:len(row)-1]
                         aantalJuist = list(map(int, aantalJuist))
-                        for i in range(0, len(aantalJuist)):
+                        for i in range(0, len(aantalJuist)-compensatieBonus):
                             if aantalJuist[i]<=antwoordLimiet:
-                                VN = i+1
-                                moeilijkeVragen.append([rondenaam[index], VN, aantalJuist[i], antwoorden[rondenummer[index]-1][VN]])
+                                if not superronde:
+                                    VN = i+1
+                                    moeilijkeVragen.append([rondenaam[index], VN, aantalJuist[i], antwoorden[rondenummer[index]-1][VN]])
+                                elif i%3 == 2:
+                                    VN = int((i+1)/3)
+                                    moeilijkeVragen.append([rondenaam[index], str(VN)+'c', aantalJuist[i], antwoorden[rondenummer[index]-1][i+1]])
+                                        
         
         moeilijkeVragen = sorted(moeilijkeVragen,key=lambda x: (x[2], x[0]))
         

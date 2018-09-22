@@ -15,7 +15,7 @@ class Control(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         self.SH.fromScannerToUser()
-        if len(self.SH.getAllScanResults())>0:
+        if len(self.SH.getAllScanResults())>1:
             msg = QtWidgets.QMessageBox()
             msg.setText("Nog niet alle scans werden gecontroleerd")
             msg.setWindowTitle("Opgelet")
@@ -25,11 +25,13 @@ class Control(QtWidgets.QMainWindow):
     def setup(self):
         from score_handler import Class_Scores
         from ronde_handler import Class_Rondes
+        from inschrijving_handler import Class_Inschrijvingen
         self.SH = Class_Scores()
         self.RH = Class_Rondes()
+        self.PH = Class_Inschrijvingen()
         self.AllScanData = self.SH.getAllScanResults()
         
-        if len(self.AllScanData)>0:
+        if len(self.AllScanData)>1:
             self.ScanDataIndex = 0
             self.currentRondeSettings = None
             self.checkboxes = []
@@ -58,23 +60,22 @@ class Control(QtWidgets.QMainWindow):
             if int(row[2]) == 0:
                 self.ScanDataIndex = i
                 self.iterateAll()
+                if self.checkTafelnummer:
+                    self.toCheck.append(row)
             else:
                 self.toCheck.append(row)
-        
         if len(self.toCheck) == 0:
             self.allChecked(True)
         else:
             self.SH.fromScannerToUser()
-            msg = QtWidgets.QMessageBox()
-            msg.setText("Er zijn nog een paar scans die manueel nagekeken moeten worden")
-            msg.setWindowTitle("Bijna klaar!")
-            msg.exec()
+            self.msgBox('Bijna klaar', 'Er zijn nog een paar scans die manueel nagekeken moeten worden.')
             self.setup()
 
     def iterateAll(self):
         self.updateFile()
-        newRow = [self.ronde] + [self.ploeg] + self.score
-        self.SH.validateScanResult(newRow)
+        if not self.checkTafelnummer:
+            newRow = [self.ronde] + [self.ploeg] + self.score
+            self.SH.validateScanResult(newRow)
         
     def nextFile(self):
         if self.updateScore():
@@ -89,10 +90,19 @@ class Control(QtWidgets.QMainWindow):
                 self.allChecked(True)
             return True
         else:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("Geen geldige score, kijk het nog eens na")
-            msg.setWindowTitle("Ongeldig")
-            msg.exec()
+            if not self.scoresOk:
+                text = 'Deze score kan niet kloppen, kijk het nog eens na!'
+            elif not self.bonusOk:
+                text = 'Er is iets mis met het bonusthema, kijk het nog eens na!'
+            elif not self.tafelOk:
+                text = 'Dit tafelnummer bestaat niet of is niet aanwezig, kijk het nog eens na!'
+                self.ploegTxt.setFocus()
+            elif not self.schiftingOk:
+                text = 'Geen geldig antwoord voor de schiftingsvraag, kijk het nog eens na!'
+                self.schiftingTxt.setFocus()
+            else:
+                text = 'Geen geldige input, kijk het nog eens na!'
+            self.msgBox('Ongeldig', text)
             return False
     
     def updateFile(self):
@@ -121,6 +131,10 @@ class Control(QtWidgets.QMainWindow):
         checked = False
         update = False
         changed = False
+        self.schiftingOk = True
+        self.bonusOk = True
+        self.tafelOk = True
+        self.scoresOk = True
         if self.ronde>0 and self.superronde == 1:
             for box in self.checkboxes:
                 score.append(int(box.isChecked()))
@@ -129,6 +143,7 @@ class Control(QtWidgets.QMainWindow):
             for i in range(int(len(score)/3)):
                 if sum(score[i*3:i*3+3])>1:
                     update = False
+                    self.scoresOk = False
                     break
             if update:
                 nieuwescore = score
@@ -142,6 +157,7 @@ class Control(QtWidgets.QMainWindow):
                 changed = not int(self.score[1])==nieuwescore[0]
             except:
                 update = False
+                self.schiftingOk = False
                                   
             if len(self.checkboxes)>1 and update:
                 bonusThema = 0
@@ -157,6 +173,8 @@ class Control(QtWidgets.QMainWindow):
                     update = True
                     if not changed and not int(self.score[1])==bonusThema:
                         changed = True
+                else:
+                    self.bonusOk = False
                 
         else:
             for i, box in enumerate(self.checkboxes):
@@ -171,9 +189,18 @@ class Control(QtWidgets.QMainWindow):
         if self.checkTafelnummer:
             try:
                 self.ploeg = int(self.ploegTxt.text())
+                aanwezig = self.PH.isAanwezig(self.ploeg)
+                if not aanwezig:
+                    #de nieuwe tafel is niet aanwezig dus is sowieso foute ingave
+                    checked = True
+                    update = False
+                    self.tafelOk = False
+                else:
+                    self.ploeg = int(str('999')+str(self.ploeg))
             except:
                 checked = True
                 update = False
+                self.tafelOk = False   
 
         if checked and not update:
             return False
@@ -182,7 +209,7 @@ class Control(QtWidgets.QMainWindow):
             filename = self.AllScanData[self.ScanDataIndex][1]
             image = cv2.imread(self.filename)
             heigth, width, channels = image.shape
-            cv2.rectangle(image, (int(width), int(heigth)), (0, 0), (0, 166, 255), 15)
+            cv2.rectangle(image, (int(width*0.1), int(heigth)), (0, int(heigth*0.9)), (0, 166, 255), -1)
             cv2.imwrite(self.filename, image)
             self.setImageLbl()
         return True
@@ -264,7 +291,7 @@ class Control(QtWidgets.QMainWindow):
                             box.hide()
                             
         self.currentRondeSettings = self.ronde
-        if self.ploeg == 999:
+        if '999' in str(self.ploeg):
             self.showQLayout(self.tafelnummer)
             self.checkTafelnummer = True
             self.ploegTxt.setText('')
@@ -285,14 +312,16 @@ class Control(QtWidgets.QMainWindow):
                 item.show()
             except:
                 pass
+    def msgBox(self, titel, text):
+        msg = QtWidgets.QMessageBox()
+        msg.setText(text)
+        msg.setWindowTitle(titel)
+        msg.exec()
         
     def allChecked(self, doeiets):
         #sluit deze GUI af en verwerk SCANCONTROL
 
-        msg = QtWidgets.QMessageBox()
-        msg.setText("Alle beschikbare scans zijn gecontroleerd!")
-        msg.setWindowTitle("Klaar!")
-        msg.exec()
+        self.msgBox('Klaar!', "Alle beschikbare scans zijn gecontroleerd!")
         if doeiets:
             self.SH.fromScannerToUser()
         self.close()

@@ -66,10 +66,13 @@ class Class_Scores():
         return IMAGESDIR
     
     def getScanResults(self):
-         with open(RONDEFILES+SCANRAW, 'rt') as fr:
-            reader = csv.reader(fr)
-            for row in reader:
-                yield row, IMAGESDIR + '{}_{}.jpg'.format(row[0], row[1])
+        try:
+            with open(RONDEFILES+SCANRAW, 'rt') as fr:
+                reader = csv.reader(fr)
+                for row in reader:
+                    yield row, IMAGESDIR + '{}_{}.jpg'.format(row[0], row[1])
+        except:
+            yield []
 
     def getAllScanResults(self):
         data = []
@@ -100,8 +103,10 @@ class Class_Scores():
             writer = csv.writer(fw)
             checkcombo = []
             for row in reader1:
+                if '999' in row[1]:
+                    row[1] = '999'
                 checkcombo.append('{}_{}'.format(row[0], row[1]))
-
+                
             for row in reader2:
                 combo = '{}_{}'.format(row[0], row[1])
                 if not combo in checkcombo:
@@ -134,8 +139,11 @@ class Class_Scores():
         return []
                 
     def setScore(self, ronde, ploeg, nieuweScore, scanner=0):
+        if '999' in str(ploeg):
+            ploeg = int(str(ploeg).replace('999', ''))
         if ronde>0:
             tmp = RONDEFILES + 'tmp.csv'
+            weggeschreven = False
             if scanner==1:
                 filename = RONDEFILES + SCANRAW
             else:
@@ -147,9 +155,13 @@ class Class_Scores():
                 for i, row in enumerate(reader):
                     if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
                         writer.writerow(row[0:2] + nieuweScore)
+                        weggeschreven = True
                     else:
                         writer.writerow(row)
-            shutil.move(tmp, filename)
+            if not weggeschreven:
+                self.insertScore(ronde, ploeg, nieuweScore, USERPREFIX)
+            else:      
+                shutil.move(tmp, filename)
         else:
             if len(nieuweScore)>1: 
                 self.PH.setSchiftingBonus(ploeg, nieuweScore[0], nieuweScore[1])
@@ -165,7 +177,11 @@ class Class_Scores():
             writer.writerow(next(reader))
             ingevoegd = 0
             for i, row in enumerate(reader):
-                if ingevoegd==0 and int(row[1]) > int(ploeg):
+                if not 'Max/Gem' in row:
+                    if ingevoegd==0 and int(row[1]) > int(ploeg):
+                        writer.writerow([ronde] + [ploeg] + score)
+                        ingevoegd = 1
+                elif ingevoegd == 0:
                     writer.writerow([ronde] + [ploeg] + score)
                     ingevoegd = 1
                 writer.writerow(row)
@@ -179,8 +195,9 @@ class Class_Scores():
             reader = csv.reader(fr)
             writer.writerow(next(reader))
             for i, row in enumerate(reader):
-                if not int(row[1]) == int(ploeg):
-                    writer.writerow(row)
+                if not 'Max/Gem' in row:
+                    if not int(row[1]) == int(ploeg):
+                        writer.writerow(row)
         shutil.move(tmp, filename)
 
     def getFinalScore(self, ploegnaamPositie):
@@ -279,6 +296,9 @@ class Class_Scores():
                     ronde = row[0]
                     ploeg = row[1]
                     score = row[2:]
+                    if '999' in str(ploeg):
+                        ploeg = int(str(ploeg).replace('999', ''))
+                        row = [ronde] + [ploeg] + score 
                     if not ronde == currentRound and ronde>0:
                         #nieuweronde dus nieuwe file opendoen!
                         del writer
@@ -336,7 +356,11 @@ class Class_Scores():
 
 
     def checkAanwezigheden(self):
-        nummers, _, _ = self.PH.aanwezigePloegen()
+        aanwezig, afwezig = self.PH.aanwezigePloegen()
+        nummers = []
+        for ploeg in aanwezig:
+            nummers.append(ploeg[0])
+        originalNumbers = nummers
         ontbrekendeBestanden = []
         nietAanwezigeInvoer = []
         filenames = os.listdir(RONDEFILES)
@@ -344,7 +368,7 @@ class Class_Scores():
             if FINALPREFIX in filename:
                 with open(RONDEFILES + filename, 'r') as fr:
                     data = list(csv.reader(fr))
-                    if not len(data)-2 == len(nummers):
+                    if not len(data)-2 == len(aanwezig):
                         #miserie...
                         ronde = data[1][0]
                         for X in range(1, len(data)-1):
@@ -356,7 +380,11 @@ class Class_Scores():
                                 pass
                         for i in nummers:
                             ontbrekendeBestanden.append('{}_{}'.format(ronde,i))
-                        nummers, _, _ = self.PH.aanwezigePloegen()
+                       
+            aanwezig, afwezig = self.PH.aanwezigePloegen()
+            nummers = []
+            for ploeg in aanwezig:
+                nummers.append(ploeg[0])
 
         
         #Verwijder de (foutieve) entry van ploegen die niet aanwezig zijn!
@@ -411,8 +439,8 @@ class Class_Scores():
                             if bonus>0:
                                 row.append(row[bonus+1])
                             else:
-                                if not row[1] in geenBonus:
-                                    geenBonus.append(row[1])
+                                if not int(row[1]) in geenBonus:
+                                    geenBonus.append(int(row[1]))
                                 row.append(0)
                         for i, score in enumerate(row[2:]):
                             JuisteAntwoorden[i] = JuisteAntwoorden[i]+int(score)
@@ -427,11 +455,17 @@ class Class_Scores():
                     writer.writerow([len(JuisteAntwoorden)] + [round(statistics.mean(totaalScore),2)] + JuisteAntwoorden + ['Max/Gem'])
                         
                 shutil.move(tmp, RONDEFILES+ filename.replace(USERPREFIX, FINALPREFIX))
+        aanwezig, _ = self.PH.aanwezigePloegen()
+        geenSchifting = []
+        for ploeg in aanwezig:
+            schifting, bonus = self.PH.getSchiftingBonus(ploeg[0])
+            if float(schifting) == 0:
+                geenSchifting.append(ploeg[0])
         ontbreekt, fout = self.checkAanwezigheden()
         geenBonus = sorted(geenBonus)
         ontbreekt = sorted(ontbreekt)
         fout = sorted(fout)
-        return geenBonus, ontbreekt, fout
+        return geenBonus, geenSchifting, ontbreekt, fout
 
     def sorteer(self, filename):
         tmp = 'tmp.csv'
@@ -517,18 +551,13 @@ class Class_Scores():
         
     def generateScorebord(self, bonusGeneration):
         a = time.time()
-        geenBonus, ontbreekt, fout = self.makeFinal()
-        print(time.time()-a)
+        geenBonus, geenSchifting, ontbreekt, fout = self.makeFinal()
+        print('makeFinal:', time.time()-a)
         self.collectAllInfo()
-        print(time.time()-a)
         self.makeScorebordInfo()
-        print(time.time()-a)
         self.setHeaders()
-        print(time.time()-a)
-        if bonusGeneration:
-            self.generateBonusOverview()
-            print(time.time()-a)
         
+        geenScoresBeschikbaar = True
         
         tmp = 'tmp.csv'
         with open(SCOREBORD, mode='rt') as fr,  open(tmp, 'w') as fw:
@@ -562,32 +591,40 @@ class Class_Scores():
                 vorigePloeg = int(row['TN'])
 
             #moet dat hier staan?
-
-            ploegdata[3] = sum(map(int,ploegdata[5:]))
-            ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
-            schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
-            schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
-            ploegdata.append(schiftingantwoord)
-            ploegdata.append(schiftingnorm)               
-            writer.writerow(ploegdata)
+            if len(ploegdata)>1:
+                ploegdata[3] = sum(map(int,ploegdata[5:]))
+                ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
+                schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
+                schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
+                ploegdata.append(schiftingantwoord)
+                ploegdata.append(schiftingnorm)               
+                writer.writerow(ploegdata)
+                geenScoresBeschikbaar = False
+                
+                
 
         #sorteren
-        with open(tmp, mode='rt') as fr, open(SCOREBORD, 'w') as fw:
-            writer = csv.writer(fw)
-            reader = csv.reader(fr)
-            writer.writerow(FIELDNAMES)
-            writer.writerow(ROW1)
-            next(reader)
-            next(reader)
-            sorted2 = sorted(reader, key = lambda row: (row[FIELDNAMES.index('Totaal')], row[FIELDNAMES.index('NormSchifting')]), reverse=True)
-            positie = 1
-            for positie, row in enumerate(sorted2):
-                writer.writerow([positie+1] + row[1:])
+        if not geenScoresBeschikbaar:
+            with open(tmp, mode='rt') as fr, open(SCOREBORD, 'w') as fw:
+                writer = csv.writer(fw)
+                reader = csv.reader(fr)
+                writer.writerow(FIELDNAMES)
+                writer.writerow(ROW1)
+                next(reader)
+                next(reader) 
+                sorted2 = sorted(reader, key = lambda row: (row[FIELDNAMES.index('Totaal')], row[FIELDNAMES.index('NormSchifting')]), reverse=True)
+                for positie, row in enumerate(sorted2):
+                    writer.writerow([positie+1] + row[1:])
+
+            print('makeScorebord:',time.time()-a)
+            if bonusGeneration:
+                self.generateBonusOverview()
+            print('generate BonusOverview:',time.time()-a)
+
         try:
             os.remove(tmp)
         except OSError:
             pass
-        print(time.time()-a)
-        return geenBonus, ontbreekt, fout
+        return geenBonus, geenSchifting, ontbreekt, fout
 
         

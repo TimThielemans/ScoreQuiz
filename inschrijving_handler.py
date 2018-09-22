@@ -25,9 +25,15 @@ def read_Settings():
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
 
         STRUCTBETALING = config.get('COMMON', 'STRUCTBETALING')
-        INSCHRIJVINGSGELD = config.get('COMMON', 'INSCHRIJVINGSGELD')
-        DARNKKAARTGELD = config.get('COMMON', 'DRANKKAARTGELD')
+        INSCHRIJVINGSGELD = float(config.get('COMMON', 'INSCHRIJVINGSGELD'))
+        DRANKKAARTGELD = float(config.get('COMMON', 'DRANKKAARTGELD'))
+
+        if DRANKKAARTGELD.is_integer():
+            DRANKKAARTGELD = int(DRANKKAARTGELD)
         
+        if INSCHRIJVINGSGELD.is_integer():
+            INSCHRIJVINGSGELD = int(INSCHRIJVINGSGELD)
+            
         global FIELDNAMES
         f = csv.reader(open(PLOEGINFO, 'rt'), delimiter = ',')
         FIELDNAMES = next(f)
@@ -115,12 +121,17 @@ class Class_Inschrijvingen():
                     writer = csv.writer(fw)
                     writer.writerows(data)
             result['TN'] = data[X][FIELDNAMES.index('TN')]
+            result['Ploegnaam'] = data[X][FIELDNAMES.index('Ploegnaam')]
             result['Uur'] = data[X][FIELDNAMES.index('Uur')]
             result['Betaald'] = int(data[X][FIELDNAMES.index('Betaald')])
-            result['Bedrag'] = int(data[X][FIELDNAMES.index('Bedrag')])
+            result['Bedrag'] = float(data[X][FIELDNAMES.index('Bedrag')])
+            if result['Bedrag'].is_integer():
+                result['Bedrag'] = int(result['Bedrag'])
 
             if result['Betaald'] == 1:
-                drankkaarten = (result['Betaald']-INSCHRIJVINGSGELD)/DRANKKAARTGELD
+                drankkaarten = (result['Bedrag']-INSCHRIJVINGSGELD)/DRANKKAARTGELD
+                if drankkaarten.is_integer():
+                    drankkaarten = int(drankkaarten)
             else:
                 drankkaarten = 0
             
@@ -231,8 +242,9 @@ class Class_Inschrijvingen():
             raise
         
     def setSchiftingBonus(self, ploeg, schifting=None, bonus=None):
-        try:
-            X = self.getRowIndex(ploeg)
+   
+        X = self.getRowIndex(ploeg)
+        if X>0:
             data = self.getData()
             if not schifting is None:
                 data[X][FIELDNAMES.index('Schifting')] = schifting
@@ -241,30 +253,38 @@ class Class_Inschrijvingen():
             with open(PLOEGINFO, 'w') as fw:
                 writer = csv.writer(fw)
                 writer.writerows(data)
-        except NameError:
-            raise
-
+            return True
+        return False
+    
     def setBetaling(self, mededeling, bedrag):
-        if len(mededeling)>10:
-            X = getRowIndexBetaling(mededeling)
+        if len(mededeling)>10 and '/' in mededeling:
+            mededeling = mededeling.replace('*', '+')
+            X = self.getRowIndexBetaling(mededeling)
             if X>0:
                 Y=FIELDNAMES.index('Bedrag')
                 data = self.getData()
-                data[X][Y] = bedrag + data[X][Y]
-                if  data[X][Y]>=INSCHRIJVINGSGELD:
-                    data[X][FIELDNAMES.index('Betaalt')] = 1
+                saldo = bedrag + float(data[X][Y])
+                if saldo.is_integer():
+                    data[X][Y] = int(saldo)
+                else:
+                    data[X][Y] = saldo
+                print(mededeling, saldo)
+                if  saldo>=INSCHRIJVINGSGELD:
+                    data[X][FIELDNAMES.index('Betaald')] = 1
                 with open(PLOEGINFO, 'w') as fw:
                     writer = csv.writer(fw)
                     writer.writerows(data)
+                return True
+        return False
 
     def setBetalingen(self, file):
         self.resetBetalingen()
         with open(file, 'rt') as fr:
-            reader = csv.DictReader(fr)
+            reader = csv.DictReader(fr, delimiter = ';')
             for index, row in enumerate(reader):
                 messageStruct = row['gestructureerde mededeling']
                 messageFree = row['Vrije mededeling']
-                bedrag = row['credit']
+                bedrag = float(row['credit'].replace(',', '.'))
                 self.setBetaling(messageStruct, bedrag)
 
     def setBonusses(self, bonusthemas):
@@ -292,17 +312,15 @@ class Class_Inschrijvingen():
         return result
 
     def aanwezigePloegen(self):
-        reader = csv.DictReader(open(PLOEGINFO, 'rt'), delimiter=',')
-        aangemeldNummer = []
+        reader = csv.DictReader(open(PLOEGINFO, 'rt'))
         aangemeldPloeg = []
         afwezigPloeg = []
         for i, row in enumerate(reader):
             if int(row['Aangemeld']) == 1:
-                aangemeldNummer.append(int(row['TN']))
-                aangemeldPloeg.append(row['Ploegnaam'])
+                aangemeldPloeg.append([int(row['TN']), row['Ploegnaam']])
             else:
-                afwezigPloeg.append(row['Ploegnaam'])
-        return aangemeldNummer, aangemeldPloeg, afwezigPloeg
+                afwezigPloeg.append([int(row['TN']), row['Ploegnaam']])
+        return aangemeldPloeg, afwezigPloeg
 
     def getSchiftingBonus(self, ploeg):
         try:
@@ -311,7 +329,7 @@ class Class_Inschrijvingen():
             Y2 = FIELDNAMES.index('Bonus')
             data = self.getData()
             if int(data[X][FIELDNAMES.index('Aangemeld')])>0:
-                return float(data[X][Y1]), int(data[X][Y2])
+                return int(data[X][Y1]), int(data[X][Y2])
             return 0, 999
         except NameError:
             raise
@@ -325,11 +343,29 @@ class Class_Inschrijvingen():
         except NameError:
             raise
 
+    def isAanwezig(self, ploeg):
+        reader = csv.DictReader(open(PLOEGINFO, 'rt'))
+        data = self.getData()
+        X = self.getRowIndex(ploeg)
+        if X>0:
+            if int(data[X][FIELDNAMES.index('Aangemeld')])>0:
+                return True
+        return False
+
     def getPloegInfo(self, ploeg):
         try:
             X = self.getRowIndex(ploeg)
             data = self.getData()
             return data[X]
+        except NameError:
+            raise
+
+    def getEmail(self, ploeg):
+        try:
+            X = self.getRowIndex(ploeg)
+            Y1 = FIELDNAMES.index('Email')
+            data = self.getData()
+            return data[X][Y1]
         except NameError:
             raise
 

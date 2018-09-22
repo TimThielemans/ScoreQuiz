@@ -7,8 +7,18 @@ class Aanpassen(QtWidgets.QDialog):
         super(Aanpassen, self).__init__(parent)
         uic.loadUi('code/ui/Aanpassen.ui', self)
         self.setWindowTitle('Scores aanpassen')
-        self.setup()
+        
         self.show()
+        self.setup()
+        self.setFocus()
+        self.qrcodeText.hide()
+
+        self.rondeBox.currentIndexChanged.connect(self.nieuweRondeBox)
+        self.NextBtn.clicked.connect(self.nextTafel)
+        self.PreviousBtn.clicked.connect(self.previousTafel)
+        self.SaveBtn.clicked.connect(self.saveScore)
+        self.qrcodeText.returnPressed.connect(self.qrGo)
+        self.schiftingTxt.installEventFilter(self)
             
     def setup(self):
         from score_handler import Class_Scores
@@ -19,24 +29,61 @@ class Aanpassen(QtWidgets.QDialog):
         self.SH = Class_Scores()
        
         self.fillComboBox()
-        
+        self.shortcut = ''
+        self.schiftingfocus = False
         self.ronde = 0
+        self.beschikbaar = False
         self.imageDir = self.SH.getImagesDir()
         self.currentRondeSettings = 99
-        number = self.PH.aantalPloegen()
-        aanwezigen = self.PH.aanwezigePloegen()
-        self.AanwezigePloegen = list(map(int, aanwezigen[0]))
-        self.AantalPloegen = int(number[1])
+        aanwezig, _ = self.PH.aanwezigePloegen()
+        self.AanwezigePloegen = []
+        for ploeg in aanwezig:
+            self.AanwezigePloegen.append(int(ploeg[0]))
+        self.AantalPloegen = len(self.AanwezigePloegen)
+        
         
         self.TNIndex = 0;
         self.updateRonde()
 
-        self.rondeBox.currentIndexChanged.connect(self.nieuweRondeBox)
-        self.NextBtn.clicked.connect(self.nextTafel)
-        self.PreviousBtn.clicked.connect(self.previousTafel)
-        self.SaveBtn.clicked.connect(self.saveScore)
-        self.qrcodeText.returnPressed.connect(self.qrGo)
-        self.qrcodeText.setFocus()
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.FocusIn:
+            if obj == self.schiftingTxt:
+                self.schiftingfocus = True
+                self.schiftingTxt.setFocusPolicy(QtCore.Qt.StrongFocus)
+            elif not obj == self:
+                self.setFocus()
+        elif event.type() == QtCore.QEvent.FocusOut:
+            if obj == self.schiftingTxt:
+                self.schiftingfocus = False
+                self.setFocus()
+        return False
+
+    def closeEvent(self, event):
+        if not self.saveScore():
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Deze laatste score is niet geldig en werd niet opgeslagen!")
+            msg.setWindowTitle("Opgelet")
+            msg.exec()
+        event.accept()
+
+    def keyPressEvent(self, event):
+        if type(event)==QtGui.QKeyEvent:
+            if event.key()==QtCore.Qt.Key_Escape:
+                self.close()
+            elif event.key()==QtCore.Qt.Key_Return or event.key() == QtCore.Qt.Key_Enter:
+                if not self.schiftingfocus and len(self.shortcut)>1:
+                    self.qrGo()
+                else:
+                    self.setFocus()
+                self.shortcut = ''
+                    
+            else:
+                if event.text().isdigit() or event.text() == '_':
+                    self.shortcut = self.shortcut + event.text()
+            event.accept()
+        else:
+            event.ignore()
+        
             
     def fillComboBox(self):
         self.rondeBox.addItem('0_Schifting&Bonus')
@@ -51,7 +98,7 @@ class Aanpassen(QtWidgets.QDialog):
 
     def nextTafel(self):
         if self.saveScore():
-            if self.TNIndex<len(self.AanwezigePloegen)-1:
+            if self.TNIndex<self.AantalPloegen-1:
                 self.TNIndex = self.TNIndex+1
                 self.updatePloeg()
             else:
@@ -68,7 +115,7 @@ class Aanpassen(QtWidgets.QDialog):
     def qrGo(self):
         if self.saveScore():
             try:
-                ronde, tafelnummer = map(int, self.qrcodeText.text().split('_'))
+                ronde, tafelnummer = map(int, self.shortcut.split('_'))
                 try:
                     self.rondeBox.setCurrentIndex(self.comborondes.index(ronde))
                     self.updateRonde()
@@ -87,6 +134,7 @@ class Aanpassen(QtWidgets.QDialog):
     def nieuweRondeBox(self):
         if self.saveScore():
             self.updateRonde()
+        self.setFocus()
 
     def updateRonde(self):
         dictronde = self.RH.getRondeInfoDict(self.comborondes[self.rondeBox.currentIndex()])
@@ -98,23 +146,25 @@ class Aanpassen(QtWidgets.QDialog):
                 self.NOQ = 1
         else:
             self.ronde = int(dictronde['RN'])
-            self.NOQ = int(dictronde['Aantal'])
+            self.NOQ = int(dictronde['Aantal'])*(1+2*int(dictronde['Super'])) #wordt enkel gebruikt indien er geen self.score beschikbaar is dus belangrijk voor superronde indien geen scan beschikbaar
         self.updatePloeg()
             
     def updatePloeg(self):
-        self.Tafelnummer = self.AanwezigePloegen[self.TNIndex]
+        self.Tafelnummer = int(self.AanwezigePloegen[self.TNIndex])
         self.tafelnummerTxt.setText(str(self.Tafelnummer))
         if self.ronde>0:
             self.score = self.SH.getScore(self.ronde, self.Tafelnummer)
-            self.filename = self.imageDir + '{}_{}.jpg'.format(self.ronde, self.Tafelnummer)
             if not len(self.score)>0:
                 self.score = [0]*self.NOQ
         else:
             self.score = self.PH.getSchiftingBonus(self.Tafelnummer)
+        
+        self.filename = self.imageDir + '{}_{}.jpg'.format(self.ronde, self.Tafelnummer)
         self.updateLayout()
 
     def saveScore(self):
         nieuwescore = []
+        update = True
         if self.ronde>0:
             for box in self.checkboxes:
                 nieuwescore.append(int(box.isChecked()))
@@ -122,15 +172,15 @@ class Aanpassen(QtWidgets.QDialog):
             if self.RH.isSuperRonde(self.ronde):
                 for i in range(int(len(nieuwescore)/3)):
                     if sum(nieuwescore[i*3:i*3+3])>1:
-                        self.msgBox('Ongeldige score', 'Geen geldige invoer voor een superronde: vraag {}'.format(i+1))
-                        return False
+                        text =  'Geen geldige invoer voor een superronde: vraag {}'.format(i+1)
+                        update= False
         else:
             nieuwescore.append(self.schiftingTxt.text())
             try:
                 float(nieuwescore[0])
             except:
-                self.msgBox('Ongeldige score', 'Geen geldige schiftingsvraag!')
-                return False
+                text = 'Geen geldige schiftingsvraag!'
+                update = False
             if len(self.checkboxes)>0:
                 aantal = 0
                 bonus = 0
@@ -138,14 +188,20 @@ class Aanpassen(QtWidgets.QDialog):
                     if box.isChecked():
                         aantal = aantal+1
                         bonus = i+1
+                nieuwescore.append(bonus)
                 if not aantal == 1:
-                    self.msgBox('Ongeldige score', 'Geen geldig bonusthema!')
-                    return False
+                    text = 'Geen geldig bonusthema!'
+                    update = False
                 
-        if not list(map(str,nieuwescore)) == self.score:
-            self.SH.setScore(self.ronde, self.Tafelnummer, nieuwescore)
-            
-        return True
+        if update:
+            if not list(map(str,nieuwescore)) == list(map(str,self.score)):
+                self.SH.setScore(self.ronde, self.Tafelnummer, nieuwescore)
+        else:
+            if self.beschikbaar or not list(map(str,nieuwescore)) == list(map(str,self.score)):
+                self.msgBox('Ongeldige score', text)
+            else:
+                return True
+        return update
     
     def setImageLbl(self):
         try:
@@ -153,8 +209,31 @@ class Aanpassen(QtWidgets.QDialog):
             if not pixmap.isNull():
                 pixmap = pixmap.scaled(self.imagesLbl.width(), self.imagesLbl.height(), QtCore.Qt.KeepAspectRatio)
                 self.imagesLbl.setPixmap(pixmap)
-                self.imagesLbl.setAlignment(QtCore.Qt.AlignCenter)
+                self.bescikbaar = True
+            else:
+                text = "Geen scan beschikbaar"
+                font = QtGui.QFont("Arial", 20)
+                metrics = QtGui.QFontMetricsF(font)
+                rect = metrics.boundingRect(text)
+                width = self.imagesLbl.width()
+                heigth = self.imagesLbl.height()
+                pos = QtCore.QPointF((width-rect.width())/2, (heigth-rect.height())/2)
+                pixmap = QtGui.QPixmap(width, heigth)
+                pixmap.fill(QtCore.Qt.white)
+                painter = QtGui.QPainter();
+                painter.begin(pixmap)
+                painter.setPen(QtCore.Qt.black);
+                painter.setFont(font);
+                painter.drawText(pos, text);
+                painter.end()
+                self.imagesLbl.setPixmap(pixmap)
+                self.beschikbaar = False
+                
+            self.imagesLbl.setAlignment(QtCore.Qt.AlignCenter)
+            
+                
         except:
+            raise
             pass
 
     def updateBoxes(self):
