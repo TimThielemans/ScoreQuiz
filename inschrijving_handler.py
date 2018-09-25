@@ -381,6 +381,13 @@ class Class_Inschrijvingen():
             for i, row in enumerate(reader):
                 yield row
 
+    def getAanwezigePloegenDict(self):
+        with open(PLOEGINFO, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for i, row in enumerate(reader):
+                if row['Aangemeld'] == '1':
+                    yield row
+
     def getPloegNamen(self):
         data = self.getData()
         aantal = self.aantalPloegen()

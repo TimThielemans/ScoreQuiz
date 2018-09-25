@@ -15,7 +15,7 @@ class Control(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         self.SH.fromScannerToUser()
-        if len(self.SH.getAllScanResults())>1:
+        if len(self.SH.getAllScanResults())>0:
             msg = QtWidgets.QMessageBox()
             msg.setText("Nog niet alle scans werden gecontroleerd")
             msg.setWindowTitle("Opgelet")
@@ -31,7 +31,7 @@ class Control(QtWidgets.QMainWindow):
         self.PH = Class_Inschrijvingen()
         self.AllScanData = self.SH.getAllScanResults()
         
-        if len(self.AllScanData)>1:
+        if len(self.AllScanData)>0:
             self.ScanDataIndex = 0
             self.currentRondeSettings = None
             self.checkboxes = []

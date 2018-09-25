@@ -21,7 +21,7 @@ def read_Settings():
         global SCANRAW
         global USERPREFIX
         global FINALPREFIX
-        global JPGPREFIX
+        global JPGPREFIX 
         global IMAGESDIR
         global QUIZFOLDER
         global BONUSOVERVIEW
@@ -184,6 +184,7 @@ class Class_Scores():
                 elif ingevoegd == 0:
                     writer.writerow([ronde] + [ploeg] + score)
                     ingevoegd = 1
+                
                 writer.writerow(row)
         shutil.move(tmp, filename)
 
@@ -198,6 +199,8 @@ class Class_Scores():
                 if not 'Max/Gem' in row:
                     if not int(row[1]) == int(ploeg):
                         writer.writerow(row)
+                else:
+                    writer.writerow(row)
         shutil.move(tmp, filename)
 
     def getFinalScore(self, ploegnaamPositie):
@@ -227,35 +230,41 @@ class Class_Scores():
         
         headers = ['TN', 'Ploegnaam', 'Origineel', 'OrigineelScore', 'Beste', 'BesteScore', 'Maximum']
         origineleBonusThemas = []
+        aantalPloegen = 0
         for ploeginfo in self.PH.getPloegenDict():
             origineleBonusThemas.append(ploeginfo['Bonus'])
+            aantalPloegen = aantalPloegen + 1 
 
         bonusScore = []
         for i in range(0, len(BONUSTHEMAS)):
             self.PH.setBonusses([i+1]*len(origineleBonusThemas))
             self.makeFinal()
-            score, maximum = self.calculateBonusScore()
+            score, maximum = self.calculateBonusScore(aantalPloegen)
             bonusScore.append(score)
 
         self.PH.setBonusses(origineleBonusThemas)
         self.makeFinal()
-        eigenScore, maximum = self.calculateBonusScore()
-
+        eigenScore, maximum = self.calculateBonusScore(aantalPloegen)
         with open(BONUSOVERVIEW, 'w') as fw:
             writer = csv.writer(fw)
             writer.writerow(headers)
             for i, ploeginfo in enumerate(self.PH.getPloegenDict()):
-                start = [ploeginfo['TN'], ploeginfo['Ploegnaam'], ploeginfo['Bonus'], eigenScore[i]]
-                besteScore = eigenScore[i]
-                beste = ploeginfo['Bonus']
-                for index in range(0, len(BONUSTHEMAS)):
-                    if bonusScore[index][i]>besteScore:
-                        besteScore = bonusScore[index][i]
-                        beste = index
+                if ploeginfo['Aangemeld'] == '1':
+                    start = [ploeginfo['TN'], ploeginfo['Ploegnaam'], ploeginfo['Bonus'], eigenScore[i]]
+                    besteScore = eigenScore[i]
+                    beste = ploeginfo['Bonus']
+                    for index in range(0, len(BONUSTHEMAS)):
+                        if bonusScore[index][i]>besteScore:
+                            besteScore = bonusScore[index][i]
+                            beste = index
+                else:
+                    start = [ploeginfo['TN'], ploeginfo['Ploegnaam'], ploeginfo['Bonus'], 0]
+                    besteScore = 0
+                    beste = 0
                 writer.writerow(start + [beste] + [besteScore] +[maximum])
                 
-    def calculateBonusScore(self):
-        bonusscore=[]
+    def calculateBonusScore(self, aantalPloegen):
+        bonusscore=[0]*aantalPloegen
         maximum = 0
         filenames = os.listdir(RONDEFILES)
         with open(SCOREBORDINFO, 'rt') as fr:
@@ -265,12 +274,9 @@ class Class_Scores():
                 if filename in filenames and bool(self.RH.isBonusRonde(row['Ronde'])):
                     with open(RONDEFILES+ filename) as fr2:
                         reader = csv.DictReader(fr2)
-                        if len(bonusscore)<1:
-                            for index, row in enumerate(reader):
-                                bonusscore.append(int(row['Bonus']))
-                        else:
-                            for index, row in enumerate(reader):
-                                bonusscore[index] = bonusscore[index] + int(row['Bonus'])
+                        for index, row in enumerate(reader):
+                            if not '.' in row['TN']:
+                                bonusscore[int(row['TN'])-1] = bonusscore[int(row['TN'])-1] + int(row['Bonus'])
                     maximum = maximum + 1
 
         return bonusscore, maximum
@@ -368,18 +374,16 @@ class Class_Scores():
             if FINALPREFIX in filename:
                 with open(RONDEFILES + filename, 'r') as fr:
                     data = list(csv.reader(fr))
-                    if not len(data)-2 == len(aanwezig):
-                        #miserie...
-                        ronde = data[1][0]
-                        for X in range(1, len(data)-1):
-                            try:
-                                index = nummers.index(int(data[X][1]))
-                                del nummers[index]
-                            except:
-                                nietAanwezigeInvoer.append('{}_{}'.format(ronde,data[X][1]))
-                                pass
-                        for i in nummers:
-                            ontbrekendeBestanden.append('{}_{}'.format(ronde,i))
+                    ronde = data[1][0]
+                    for X in range(1, len(data)-1):
+                        try:
+                            index = nummers.index(int(data[X][1]))
+                            del nummers[index]
+                        except:
+                            nietAanwezigeInvoer.append('{}_{}'.format(ronde,data[X][1]))
+                            pass
+                    for i in nummers:
+                        ontbrekendeBestanden.append('{}_{}'.format(ronde,i))
                        
             aanwezig, afwezig = self.PH.aanwezigePloegen()
             nummers = []
@@ -436,12 +440,15 @@ class Class_Scores():
                             writer.writerow(header)
                         if bonusRonde == 1:
                             schifting, bonus = self.PH.getSchiftingBonus(int(row[1]))
-                            if bonus>0:
-                                row.append(row[bonus+1])
+                            if not bonus == 999:
+                                if bonus>0:
+                                    row.append(row[bonus+1])
+                                else:
+                                    if not int(row[1]) in geenBonus:
+                                        geenBonus.append(int(row[1]))
+                                    row.append(0)
                             else:
-                                if not int(row[1]) in geenBonus:
-                                    geenBonus.append(int(row[1]))
-                                row.append(0)
+                                row.append(0) #de ploeg is niet aanwezig maar die wordt pas in checkAanwezigheden verwijderd
                         for i, score in enumerate(row[2:]):
                             JuisteAntwoorden[i] = JuisteAntwoorden[i]+int(score)
                         writer.writerow(row)
@@ -612,7 +619,7 @@ class Class_Scores():
                 writer.writerow(ROW1)
                 next(reader)
                 next(reader) 
-                sorted2 = sorted(reader, key = lambda row: (row[FIELDNAMES.index('Totaal')], row[FIELDNAMES.index('NormSchifting')]), reverse=True)
+                sorted2 = sorted(reader, key = lambda row: (float(row[FIELDNAMES.index('Totaal')]), float(row[FIELDNAMES.index('NormSchifting')])), reverse=True)
                 for positie, row in enumerate(sorted2):
                     writer.writerow([positie+1] + row[1:])
 
