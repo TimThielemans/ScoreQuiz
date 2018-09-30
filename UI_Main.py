@@ -62,7 +62,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 1
+        debug = 0
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()

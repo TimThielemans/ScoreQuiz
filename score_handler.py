@@ -27,6 +27,14 @@ def read_Settings():
         global BONUSOVERVIEW
         global BONUSTHEMAS
         global SCHIFTING
+        global SCORETEMPLATEHTML
+        global SCOREHTMLFULL
+        global SCOREHTMLLAST
+        global CSSFINAL
+        global CSSTEMPLATE
+        global JSFINAL
+        global JSTEMPLATE
+        global AANTALTUSSENSTAND
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         SCOREBORD = QUIZFOLDER+config.get('PATHS', 'SCOREBORD')
@@ -35,6 +43,15 @@ def read_Settings():
         IMAGESDIR = QUIZFOLDER+config.get('PATHS', 'OUTPUTIMAGES')
         BONUSOVERVIEW = QUIZFOLDER + config.get('PATHS', 'BONUSOVERVIEW')
         BONUSTHEMAS = config.get('COMMON', 'BONUSTHEMAS').split(',')
+        AANTALTUSSENSTAND = int(config.get('COMMON', 'AANTALTUSSENSTANDRONDES'))
+
+        SCORETEMPLATEHTML = config.get('PATHS', 'SCORETEMPLATE')
+        SCOREHTMLFULL = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLFULL')
+        SCOREHTMLLAST = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLLAST')
+        CSSFINAL = QUIZFOLDER+config.get('PATHS', 'SCORECSS')
+        CSSTEMPLATE = config.get('PATHS', 'CSSTEMPLATESCORE')
+        JSFINAL = QUIZFOLDER+config.get('PATHS', 'SCOREJS')
+        JSTEMPLATE= config.get('PATHS', 'JSTEMPLATESCORE')
         
         SCHIFTING = float(config.get('COMMON', 'SCHIFTING'))
         SCANRAW = config.get('COMMON', 'SCANRAW')
@@ -542,13 +559,13 @@ class Class_Scores():
         global FIELDNAMES
         global ROW1
         
-        FIELDNAMES = ['Positie', 'TN', 'Ploegnaam', 'Totaal', 'Percent']
+        FIELDNAMES = ['Pos', 'TN', 'Ploegnaam', 'Score', '%']
         ROW1 = ['', '', '','', '100']
 
         with open(SCOREBORDINFO, 'rt') as fr:
             readerInfo = csv.DictReader(fr)
             for row in readerInfo:
-                FIELDNAMES.append(row['Ronde'])
+                FIELDNAMES.append(row['Afkorting'])
                 ROW1.append(int(row['Maximum']))
         ROW1[3] = sum(ROW1[5:])
         FIELDNAMES.append('Schifting')
@@ -580,14 +597,15 @@ class Class_Scores():
                     #nieuwe ploeg
                     if i>0:
                         ploegdata[3] = sum(map(int,ploegdata[5:]))
-                        ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
+                        ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Score')]*100, 2)
                         schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
                         schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
                         ploegdata.append(schiftingantwoord)
                         ploegdata.append(schiftingnorm)               
                         writer.writerow(ploegdata)
                     try:
-                        ploegdata = ['', row['TN'], self.PH.getPloegnaam(row['TN']), '', '']
+                        ploegnaam = self.PH.getPloegnaam(row['TN'])
+                        ploegdata = ['', row['TN'], ploegnaam, '', '']
                         ploegdata.append(row['Score'])
                     except NameError:
                         print(row['TN'])
@@ -600,7 +618,7 @@ class Class_Scores():
             #moet dat hier staan?
             if len(ploegdata)>1:
                 ploegdata[3] = sum(map(int,ploegdata[5:]))
-                ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Totaal')]*100, 2)
+                ploegdata[4]= round(ploegdata[3]/ROW1[FIELDNAMES.index('Score')]*100, 2)
                 schiftingantwoord, Bonus = self.PH.getSchiftingBonus(vorigePloeg)
                 schiftingnorm = round(SCHIFTING/(abs(float(schiftingantwoord)-SCHIFTING)+0.0001), 3)
                 ploegdata.append(schiftingantwoord)
@@ -619,7 +637,7 @@ class Class_Scores():
                 writer.writerow(ROW1)
                 next(reader)
                 next(reader) 
-                sorted2 = sorted(reader, key = lambda row: (float(row[FIELDNAMES.index('Totaal')]), float(row[FIELDNAMES.index('NormSchifting')])), reverse=True)
+                sorted2 = sorted(reader, key = lambda row: (float(row[FIELDNAMES.index('Score')]), float(row[FIELDNAMES.index('NormSchifting')])), reverse=True)
                 for positie, row in enumerate(sorted2):
                     writer.writerow([positie+1] + row[1:])
 
@@ -627,11 +645,102 @@ class Class_Scores():
             if bonusGeneration:
                 self.generateBonusOverview()
             print('generate BonusOverview:',time.time()-a)
+            
 
         try:
             os.remove(tmp)
         except OSError:
             pass
+        
+        self.visualizeScorebord()
         return geenBonus, geenSchifting, ontbreekt, fout
 
+    def visualizeScorebord(self):
+        headersfull = ''
+        headerslast = ''
+        bodyfull = ''
+        bodylast = ''
+        template = open(SCORETEMPLATEHTML).read()
+        headerValues = []
+        withTablenummer = 0 
+
+        if withTablenummer == 0:
+            lastindexes = [0,1,2,3,4]
+        else:
+            lastindexes = [0,2,3,4]
+        
+        with open(SCOREBORD, mode='rt') as fr: 
+            reader = csv.reader(fr)
+            row1 = next(reader)
+            row2 = next(reader)
+
+            if len(row1)>=AANTALTUSSENSTAND+5+2: #schifting en normschifting hoeven er ook niet in te zitten
+                lastindexes.extend(range(len(row1)-2-AANTALTUSSENSTAND, len(row1)-2))
+            else:
+                lastindexes = range(0, len(row1)-2)
+
+            headersfull = headersfull + '<th class="tg-0pky">No</th>'
+            headersfull = headersfull + '<th class="tg-0pky">TN</th>'
+            headersfull = headersfull + '<th class="tg-0pky">Ploegnaam</th>'
+
+            headerslast = headerslast + '<th class="tg-0pky">No</th>'
+            if withTablenummer == 1:
+                headerslast = headerslast + '<th class="tg-0pky">TN</th>'
+            headerslast = headerslast + '<th class="tg-0pky">Ploegnaam</th>'
+            
+            for i in range(3, len(row1)-1):
+                headersfull = headersfull +  '<th class="tg-c3ow">{}</br>{}</th>'.format(row1[i], row2[i])
+                if i in lastindexes:
+                    headerslast = headerslast + '<th class="tg-c3ow">{}</br>{}</th>'.format(row1[i], row2[i])
+
+            for i, row in enumerate(reader):
+                bodylast = bodylast + '<tr tabindex="{}">'.format(i) + '<td class="tg-0pky">{}</td>'.format(row[0])
+                if withTablenummer == 1:
+                    bodylast = bodylast + '<td class="tg-0pky">{}</td>'.format(row[1])
+                
+                ploegnaam = row[2]
+                if len(ploegnaam)>25:
+                    ploegnaam= ploegnaam[:24]+'..'
+                bodylast = bodylast + '<td class="tg-0pky">{}</td>'.format(ploegnaam)
+                bodylast = bodylast + '<td class="tg-mqa1">{}</td>'.format(row[3]) + '<td class="tg-mqa1">{}</td>'.format(row[4])
+
+                bodyfull = bodyfull + '<tr tabindex="{}">'.format(i) + '<td class="tg-0pky">{}</td>'.format(row[0])
+                bodyfull = bodyfull + '<td class="tg-0pky">{}</td>'.format(row[1])
+                bodyfull = bodyfull + '<td class="tg-0pky">{}</td>'.format(row[2])
+                bodyfull = bodyfull + '<td class="tg-mqa1">{}</td>'.format(row[3]) + '<td class="tg-mqa1">{}</td>'.format(row[4])
+                for j in range(5, len(row)-1):#norm schifting moet er niet in
+                    newstring = '<td class="tg-c3ow">{}</td>'.format(row[j])
+                    bodyfull = bodyfull + newstring
+                    if j in lastindexes:
+                        bodylast = bodylast + newstring
+
+                bodyfull = bodyfull + '</tr>'
+                bodylast = bodylast + '</tr>'
+
+        fullHTML  = open(SCOREHTMLFULL,"w")
+        fullHTML.write(template.format(HEADERS = headersfull, BODY = bodyfull))
+        fullHTML.close()
+        lastHTML  = open(SCOREHTMLLAST,"w")
+        lastHTML.write(template.format(HEADERS = headerslast, BODY = bodylast))
+        lastHTML.close()
+
+        
+        templatestyle = open(CSSTEMPLATE).read()
+        style  = open(CSSFINAL,"w")
+        style.write(templatestyle)
+        style.close()
+        templatescript = open(JSTEMPLATE).read()
+        script  = open(JSFINAL,"w")
+        script.write(templatescript)
+        script.close()
+
+        
+        
+
+            
+
+            
+                
+
+        
         
