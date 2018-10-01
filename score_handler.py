@@ -734,7 +734,9 @@ class Class_Scores():
         script.write(templatescript)
         script.close()
 
-        
+        a = SCOREHTMLLAST.split('/')
+        b = SCORETEMPLATEHTML.split('/')
+        shutil.copy(SCORETEMPLATEHTML.replace(b[len(b)-1], 'background.jpg'), SCOREHTMLLAST.replace(a[len(a)-1], 'background.jpg'))
         
 
             
