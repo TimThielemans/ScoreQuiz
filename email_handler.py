@@ -4,6 +4,7 @@ import configparser, inspect, os
 import math
 import csv
 import pyqrcode
+import base64
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
 def read_Settings():
@@ -117,10 +118,11 @@ class Class_Emails():
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
         onderwerp = 'Betaling en QRcode 6e Q@C Sinterklaasquiz'
-        filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
-        pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nJeugd Sint Cecilia Rotselaar\nBE67731044815587\nEUR38\n\n{}'.format(mededeling)
+        pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
-        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
+        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
         self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
 
@@ -240,12 +242,12 @@ class Class_Emails():
                         
                 ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor SCR. Stuurt uitnodiging naar Fans, en de laatste 2 SCR en laatste Kwistet deelnemers
                 if not int(row[SCRindex[len(SCRindex)-1]]) == 1 and index>int(minimum):
-                    if SCRsum+Kwistetsum+BOWsum>6 or int(row[SCRindex[len(SCRindex)-2]])==1 or int(row[SCRindex[len(SCRindex)-3]])==1 or int(row[Kwistetindex[len(Kwistetindex)-1]])==1:
+                    if SCRsum+Kwistetsum+BOWsum>6 or row[SCRindex[len(SCRindex)-2]]=='1' or row[SCRindex[len(SCRindex)-3]]=='1' or row[Kwistetindex[len(Kwistetindex)-1]]=='1':
                         template = open(UITNODIGINGHERINNERING).read()
                         text = template.format(VOORNAAM=row[0])
                         onderwerp = 'Herinnering 6e Q@C Sinterklaasquiz Rotselaar 07/12/2018'
                         adres = row[1]
-                       # self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        #self.EH.send_HTML_Mail(adres, onderwerp, text)
                         print(index, adres)
                     else:
                         print(index, row[1], 'Is niet recent naar een quiz geweest')

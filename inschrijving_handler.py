@@ -311,6 +311,14 @@ class Class_Inschrijvingen():
         result = [aantalAangemeld, aantalHuidigeInschrijvingen, int(aantalInschrijvingen), aantalBetaald]
         return result
 
+    def aantalZonder(self):
+        reader = csv.DictReader(open(PLOEGINFO, 'rt'), delimiter=',')
+        aantalZonder = 0
+        for i, row in enumerate(reader):
+            if not '@' in row['Email']:
+                aantalZonder = aantalZonder +1
+        return aantalZonder
+
     def aanwezigePloegen(self):
         reader = csv.DictReader(open(PLOEGINFO, 'rt'))
         aangemeldPloeg = []
@@ -322,6 +330,14 @@ class Class_Inschrijvingen():
                 afwezigPloeg.append([int(row['TN']), row['Ploegnaam']])
         return aangemeldPloeg, afwezigPloeg
 
+    def getBetalingen(self):
+        Y = FIELDNAMES.index('Bedrag')
+        data = self.getData()
+        bedrag = 0
+        for X in range(1, len(data)):
+            bedrag=bedrag + float(data[X][Y])
+        return bedrag
+        
     def getSchiftingBonus(self, ploeg):
         try:
             X = self.getRowIndex(ploeg)

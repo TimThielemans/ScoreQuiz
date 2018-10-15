@@ -9,7 +9,7 @@ class Aanmelden(QtWidgets.QDialog):
         
         self.setup()
         self.show()
-
+        
     def setup(self):
         #fill Combobox
         from inschrijving_handler import Class_Inschrijvingen
@@ -51,19 +51,13 @@ class Aanmelden(QtWidgets.QDialog):
                     if answer == qm.Yes:
                         self.PH.resetAanmelding(ploegnaam)
                 else:
-                    if bool(aanmeldResult['Betaald']):
-                        tekst = tekst + "<p align='left'> Betaling in orde: €{}<br>".format(aanmeldResult['Bedrag']) + "Drankkaarten: {}<br>".format(aanmeldResult['Drankkaarten'])
-                    else:
-                        tekst = tekst + "<p align='left'> NOG NIET BETAALD!!!<br>"
-
                     if not aanmeldResult['Email']:
-                        tekst = tekst + "EMAILADRES TOEVOEGEN!!!</p>"
-                        self.msgBoxAanmelden(tekst, 'Aanmelding')
+                        self.msgBoxAanmelden(aanmeldResult['Ploegnaam'], aanmeldResult['TN'], aanmeldResult['Bedrag'], aanmeldResult['Drankkaarten'], '!!!')
                         email, ok = QtWidgets.QInputDialog.getText(self, 'Emailadres', 'Emailadres voor ploeg {}'.format(ploegnaam));
                         if '@' in email and ok:
                             self.PH.veranderEmail(ploegnaam, email)
                     else:
-                        self.msgBoxAanmelden(tekst + '</p>', 'Aanmelding')
+                        self.msgBoxAanmelden(aanmeldResult['Ploegnaam'], aanmeldResult['TN'], aanmeldResult['Bedrag'], aanmeldResult['Drankkaarten'], 'OK')
                 self.updateLabel()
             else:
                 self.msgBox('Ploeg niet gevonden', 'Ongeldig')
@@ -97,12 +91,59 @@ class Aanmelden(QtWidgets.QDialog):
         msg.setWindowTitle(titel)
         msg.exec()
 
-    def msgBoxAanmelden(self, text, titel):
+    def msgBoxAanmelden(self, ploegnaam, tafelnummer, betaald, drankkaarten, email):
+
+        if float(betaald) < 1:
+            bedrag = '!! 0 !!'
+        else:
+            bedrag = betaald
+
+        text = '''
+        <table style="height: 321px;" width="857">
+        <tbody>
+        <tr>
+        <td style="width: 587px; text-align: center;" colspan="2">Ploegnaam</td>
+        <td style="width: 254px; text-align: center;">Tafelnummer</td>
+        </tr>
+        <tr>
+        <td style="text-align: center; width: 587px;" colspan="2">
+        <p><span style="font-size: 30pt;"><strong>{PLOEGNAAM}</strong></span></p>
+        </td>
+        <td style="text-align: center; width: 254px;">
+        <p><strong><span style="font-size: 36pt;">{TN}</span></strong></p>
+        </td>
+        </tr>
+        <tr>
+        <td style="width: 308px; text-align: center;">&nbsp;</td>
+        <td style="width: 273px; text-align: center;">&nbsp;</td>
+        <td style="width: 254px; text-align: center;">&nbsp;</td>
+        </tr>
+        <tr>
+        <td style="width: 308px; text-align: center;">Al betaald</td>
+        <td style="width: 273px; text-align: center;">#Drankkaarten</td>
+        <td style="width: 254px; text-align: center;">Email</td>
+        </tr>
+        <tr>
+        <td style="text-align: center; width: 308px;">
+        <p><strong><span style="font-size: 36pt;">&euro;{BEDRAG}</span></strong></p>
+        </td>
+        <td style="text-align: center; width: 273px;">
+        <p><strong><span style="font-size: 36pt;">{DRANK}</span></strong></p>
+        </td>
+        <td style="text-align: center; width: 254px;">
+        <p><strong><span style="font-size: 36pt;">{EMAIL}</span></strong></p>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+        '''
+        text = text.format(PLOEGNAAM = ploegnaam, TN = tafelnummer, BEDRAG = bedrag, DRANK = drankkaarten, EMAIL = email)
+
         msg = QtWidgets.QMessageBox()
         #msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText(text)
-        msg.setWindowTitle(titel)
-        msg.setStyleSheet("QLabel{min-width: 300px;}");
+        msg.setWindowTitle('Aanmelden')
+        msg.setStyleSheet("QLabel{min-width: 850px;}");
         msg.exec()
 
     def questionBox(self, text, titel):

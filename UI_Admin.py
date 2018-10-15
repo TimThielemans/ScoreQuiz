@@ -13,7 +13,7 @@ class AdminUI(QtWidgets.QDialog):
         uic.loadUi('code/ui/Admin.ui', self)
         self.setup()
         self.show()
-
+        
     def setup(self):
         from inschrijving_handler import Class_Inschrijvingen
         from ronde_handler import Class_Rondes
@@ -27,6 +27,7 @@ class AdminUI(QtWidgets.QDialog):
 
         self.fillComboBoxes()
         self.fillInfoFields()
+        self.updateOverzicht()
         
         self.origineelPBox.currentIndexChanged.connect(self.fillInfoFields)
         self.origineelRBox.currentIndexChanged.connect(self.fillInfoFields)
@@ -51,6 +52,8 @@ class AdminUI(QtWidgets.QDialog):
         self.EindstandBtn.clicked.connect(self.emailEindstand)
         self.Uitnodiging2Btn.clicked.connect(self.emailUitnodigingReminder)
         self.UitnodigingBtn.clicked.connect(self.emailUitnodiging)
+
+        self.updateOverzichtBtn.clicked.connect(self.saveOverzicht)
         
 
     def fillComboBoxes(self):
@@ -238,6 +241,40 @@ class AdminUI(QtWidgets.QDialog):
         self.PH.autoUpdate()
         #self.PH.sorteerPloegGeneral()
         print('DEBUG mode: Ploeg General is niet gesorteerd om overzicht te behouden, enkel uncomment na de quiz best')
+
+
+    def updateOverzicht(self):
+        aantalAangemeld, aantalHuidigeInschrijvingen, aantalInschrijvingen, aantalBetaald = self.PH.aantalPloegen()
+        bedrag = self.PH.getBetalingen()
+
+        self.actieveTxt.setText(str(aantalHuidigeInschrijvingen))
+        self.totaalTxt.setText(str(aantalInschrijvingen))
+        self.betaaldTxt.setText(str(aantalBetaald))
+        self.bedragTxt.setText('€' + str(bedrag))
+        self.geenEmailTxt.setText(str(self.PH.aantalZonder()))
+
+        try:
+            config = configparser.ConfigParser()
+            config.read('settings.ini')
+            self.tresholdTxt.setText(config.get('COMMON', 'TRESHOLD'))
+            self.percentageTxt.setText(config.get('COMMON', 'BOXPERCENT'))
+            self.moeilijkTxt.setText(config.get('COMMON', 'MOEILIJKTRESHOLD'))
+            
+        except Exception as error_msg:
+            print("Error while trying to read Settings.")
+            print({"Error" : str(error_msg)})
+
+        
+        
+    def saveOverzicht(self):
+        filename = 'settings.ini'
+        parser = configparser.ConfigParser()
+        parser.read(filename)
+        parser.set('COMMON', 'TRESHOLD', self.tresholdTxt.text())
+        parser.set('COMMON', 'BOXPERCENT', self.percentageTxt.text())
+        parser.set('COMMON', 'MOEILIJKTRESHOLD', self.moeilijkTxt.text())
+        with open(filename, 'w') as configfile:
+            parser.write(configfile)
         
     def msgBox(self, text, titel):
         msg = QtWidgets.QMessageBox()

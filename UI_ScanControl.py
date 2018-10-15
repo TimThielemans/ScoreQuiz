@@ -6,8 +6,10 @@ class Control(QtWidgets.QMainWindow):
         super(Control, self).__init__(parent)
         uic.loadUi('code/ui/Controleren.ui', self)
         self.setWindowTitle('Scans controleren')
-        self.show()
         self.setup()
+        
+        self.show()
+
 
         self.nextBtn.clicked.connect(self.nextFile)
         self.updateScoreBtn.clicked.connect(self.updateScore)
@@ -21,6 +23,16 @@ class Control(QtWidgets.QMainWindow):
             msg.setWindowTitle("Opgelet")
             msg.exec()
         event.accept()
+
+    def keyPressEvent(self, event):
+        if type(event)==QtGui.QKeyEvent:
+            if event.key()==QtCore.Qt.Key_Escape:
+                self.close()
+            elif event.key()==QtCore.Qt.Key_Right or event.key() == QtCore.Qt.Key_Enter or event.key() == QtCore.Qt.Key_Return:
+                self.nextFile()
+            event.accept()
+        else:
+            event.ignore() 
         
     def setup(self):
         from score_handler import Class_Scores

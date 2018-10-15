@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>607</width>
-    <height>504</height>
+    <width>868</width>
+    <height>539</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1287,6 +1287,27 @@
              </property>
             </widget>
            </item>
+           <item>
+            <widget class="QLabel" name="label_22">
+             <property name="text">
+              <string>Scan Treshold</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_23">
+             <property name="text">
+              <string>box Percentage</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="moeilijkLbl">
+             <property name="text">
+              <string>Moeilijk Percentage</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
          <item>
@@ -1303,39 +1324,69 @@
           </spacer>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_4">
+          <layout class="QVBoxLayout" name="verticalLayout_4" stretch="1,1,1,1,1,1,1,1">
            <item>
-            <widget class="QLabel" name="label_17">
+            <widget class="QLabel" name="actieveTxt">
              <property name="text">
               <string>Actieve Inschrijvingen</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="label_18">
+            <widget class="QLabel" name="totaalTxt">
              <property name="text">
               <string>Totaal Inschrijvingen</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="label_19">
+            <widget class="QLabel" name="geenEmailTxt">
              <property name="text">
               <string>Zonder Emailadres</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="label_20">
+            <widget class="QLabel" name="betaaldTxt">
              <property name="text">
               <string>Betaling In orde</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="label_21">
+            <widget class="QLabel" name="bedragTxt">
              <property name="text">
               <string>Ontvangen bedrag</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="tresholdTxt">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="percentageTxt">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="moeilijkTxt">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
              </property>
             </widget>
            </item>

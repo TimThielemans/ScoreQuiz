@@ -7,8 +7,7 @@ class Inschrijving(QtWidgets.QDialog):
         uic.loadUi('code/ui/NieuwePloeg.ui', self)
         self.setWindowTitle('Nieuwe Ploeg')
         self.show()
-
-
+      
         from inschrijving_handler import Class_Inschrijvingen
         from email_handler import Class_Emails
         

@@ -20,6 +20,7 @@ class startScherm(QtWidgets.QMainWindow):
         uic.loadUi('code/ui/MainControl.ui', self)
         self.setup()
         self.show()
+        self.move(QtWidgets.QDesktopWidget().availableGeometry().center() - self.frameGeometry().center())
 
     def setup(self):
         geldig = self.selectDir()
@@ -62,7 +63,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 1
+        debug = 0
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()
@@ -147,7 +148,8 @@ class startScherm(QtWidgets.QMainWindow):
         wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
         if ok and wachtwoord == WACHTWOORD:
             UI_Admin.AdminUI(self)
-        
+        from score_handler import Class_Scores
+        self.SH = Class_Scores()
 
             
     def msgBox(self, text, titel):
