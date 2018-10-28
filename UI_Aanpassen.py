@@ -16,7 +16,6 @@ class Aanpassen(QtWidgets.QDialog):
         self.rondeBox.currentIndexChanged.connect(self.nieuweRondeBox)
         self.NextBtn.clicked.connect(self.nextTafel)
         self.PreviousBtn.clicked.connect(self.previousTafel)
-        self.SaveBtn.clicked.connect(self.saveScore)
         self.qrcodeText.returnPressed.connect(self.qrGo)
         self.schiftingTxt.installEventFilter(self)
             
@@ -76,7 +75,20 @@ class Aanpassen(QtWidgets.QDialog):
                 else:
                     self.setFocus()
                 self.shortcut = ''
-                    
+            elif event.key() == QtCore.Qt.Key_Left:
+                self.previousTafel()
+            elif event.key() == QtCore.Qt.Key_Right:
+                self.nextTafel()
+            elif event.key() == QtCore.Qt.Key_Down:
+                a = self.rondeBox.currentIndex()
+                if a<len(self.comborondes)-1:
+                    self.rondeBox.setCurrentIndex(a+1)
+            elif event.key() == QtCore.Qt.Key_Up:
+                a = self.rondeBox.currentIndex()
+                if a>0:
+                    self.rondeBox.setCurrentIndex(a-1)
+            
+            
             else:
                 if event.text().isdigit() or event.text() == '_':
                     self.shortcut = self.shortcut + event.text()
