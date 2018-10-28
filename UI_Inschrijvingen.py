@@ -45,7 +45,18 @@ class Inschrijving(QtWidgets.QDialog):
             self.AchternaamTxt.setText('')
             self.EmailTxt.setText('')
             
+
         except NameError:
+            qm = QtWidgets.QMessageBox()
+            answer = qm.question(QtWidgets.QDialog(), 'Email verzenden?', 'De quiz is momenteel volzet en de ploeg werd toevoegd aan de wachtlijst. Standaard wachtlijst email sturen naar {}'.format(email), qm.Yes | qm.No)
+            if answer == qm.Yes:
+                self.EH.wachtlijst(subscription)
+            self.PloegnaamTxt.setText('')
+            self.VoornaamTxt.setText('')
+            self.AchternaamTxt.setText('')
+            self.EmailTxt.setText('')
+
+        except ValueError:
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setText("Deze ploegnaam is al ingebruikt, inschrijving dus niet verwerkt!")

@@ -34,6 +34,7 @@ def read_Settings():
         global TABLELAYOUT
         global MOEILIJK
         global MOEILIJKTRESHOLD
+        global EMAILWACHTLIJST
 
         global SCOREBORD
         global SCOREBORDINFO
@@ -81,6 +82,7 @@ def read_Settings():
         EMAILBETALINGSHERINNERING = QUIZFOLDER + config.get('EMAIL', 'BETALINGREMINDER')
         EMAILLASTINFO = QUIZFOLDER + config.get('EMAIL', 'LAATSTEINFO')
         EMAILEINDSTAND = QUIZFOLDER + config.get('EMAIL', 'EINDSTAND')
+        EMAILWACHTLIJST = QUIZFOLDER + config.get('EMAIL', 'WACHTLIJST')
 
         INSCHRIJVINGSGELD = config.get('COMMON', 'INSCHRIJVINGSGELD')
         DRANKKAART = config.get('COMMON', 'DRANKKAARTGELD')
@@ -112,6 +114,12 @@ class Class_Emails():
         text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
         to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
         self.EH.send_HTML_Mail(to_email, 'Bevestiging Inschrijving 6e Q@C Sinterklaasquiz', text)
+
+    def wachtlijst(self, ploeginfo):
+        template = open(EMAILWACHTLIJST).read()
+        text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
+        to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
+        self.EH.send_HTML_Mail(to_email, 'Inschrijving 6e Q@C Sinterklaasquiz: Wachtlijst', text)
 
     def sendBetalingQR(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']

@@ -18,15 +18,20 @@ def read_Settings():
         global PLOEGGENERAL
         global QUIZFOLDER
         global HEADERSPATH
+        global MAXIMAALDEELNEMERS
+        global WACHTLIJST
+        global FIELDNAMESWACHTLIJST
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         
         PLOEGINFO = QUIZFOLDER + config.get('PATHS', 'PLOEGINFO')
+        WACHTLIJST = QUIZFOLDER + config.get('PATHS', 'PLOEGWACHTLIJST')
         HEADERSPATH = QUIZFOLDER + config.get('PATHS', 'HEADERS')   
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
 
         STRUCTBETALING = config.get('COMMON', 'STRUCTBETALING')
         INSCHRIJVINGSGELD = float(config.get('COMMON', 'INSCHRIJVINGSGELD'))
         DRANKKAARTGELD = float(config.get('COMMON', 'DRANKKAARTGELD'))
+        MAXIMAALDEELNEMERS = int(config.get('COMMON', 'MAXIMAALDEELNEMERS'))
 
         if DRANKKAARTGELD.is_integer():
             DRANKKAARTGELD = int(DRANKKAARTGELD)
@@ -37,6 +42,11 @@ def read_Settings():
         global FIELDNAMES
         f = csv.reader(open(PLOEGINFO, 'rt'), delimiter = ',')
         FIELDNAMES = next(f)
+        del f
+
+        global FIELDNAMESWACHTLIJST
+        f = csv.reader(open(WACHTLIJST, 'rt'), delimiter = ',')
+        FIELDNAMESWACHTLIJST = next(f)
         del f
 
         global DEFHEADERS
@@ -75,13 +85,20 @@ class Class_Inschrijvingen():
             if modulo == 0:
                 modulo = 97
             Mededeling = '+++{}{}+++'.format(struct, str(modulo).zfill(2))
-            with open(PLOEGINFO, 'a+') as fw:
-                writer = csv.DictWriter(fw, FIELDNAMES)
-                writer.writerow({'IN': IN, 'TN': TN, 'Ploegnaam' : ploegdata[0], 'Voornaam': ploegdata[1] , 'Achternaam': ploegdata[2], 'Email': ploegdata[3], 'Datum': time.strftime('%d/%m/%Y'), 'Mededeling': Mededeling})        
-            self.autoUpdate()
+            if TN<MAXIMAALDEELNEMERS:
+                with open(PLOEGINFO, 'a+') as fw:
+                    writer = csv.DictWriter(fw, FIELDNAMES)
+                    writer.writerow({'IN': IN, 'TN': TN, 'Ploegnaam' : ploegdata[0], 'Voornaam': ploegdata[1] , 'Achternaam': ploegdata[2], 'Email': ploegdata[3], 'Datum': time.strftime('%d/%m/%Y'), 'Mededeling': Mededeling})
+                self.autoUpdate()
+            else:
+                with open(WACHTLIJST, 'a+') as fw:
+                    writer = csv.DictWriter(fw, FIELDNAMESWACHTLIJST)
+                    writer.writerow({'IN': IN, 'Ploegnaam' : ploegdata[0], 'Voornaam': ploegdata[1] , 'Achternaam': ploegdata[2], 'Email': ploegdata[3], 'Datum': time.strftime('%d/%m/%Y')})
+                raise NameError('Wachtlijst')
         else:
+            print('niet uniek')
             #inschrijving is niet gelukt want de ploegnaam bestaat al!
-            raise NameError('Ploegnaam is niet uniek!')
+            raise ValueError('Ploegnaam is niet uniek!')
             
     
     def verwijderPloeg(self, ploeg):
@@ -308,6 +325,9 @@ class Class_Inschrijvingen():
                 aantalHuidigeInschrijvingen = i+1
                 aantalInschrijvingen = row['IN']
                 aantalBetaald = aantalBetaald + int(row['Betaald'])
+        reader = csv.DictReader(open(WACHTLIJST, 'rt'), delimiter = ',')
+        for i, row in enumerate(reader):
+            aantalInschrijvingen = row['IN']
         result = [aantalAangemeld, aantalHuidigeInschrijvingen, int(aantalInschrijvingen), aantalBetaald]
         return result
 
