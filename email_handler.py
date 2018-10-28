@@ -293,9 +293,9 @@ class Class_Emails():
             reader = csv.DictReader(fr)
             for row in reader:
                 if row['Ploegnaam'] == ploegnaam:
-                    tekst = 'Jullie kozen {} als bonusthema ({}/{})'.format(BONUSTHEMAS[int(row['Origineel'])], row['OrigineelScore'], row['Maximum'])
+                    tekst = 'Jullie kozen {} als bonusthema ({}/{})'.format(BONUSTHEMAS[int(row['Origineel'])-1], row['OrigineelScore'], row['Maximum'])
                     if int(row['BesteScore'])>int(row['OrigineelScore']):
-                        tekst = tekst + ', dat is niet slecht maar op {} heb je beter gescoord ({}/{})! '.format(BONUSTHEMAS[int(row['Beste'])], row['BesteScore'], row['Maximum'])
+                        tekst = tekst + ', dat is niet slecht maar op {} heb je beter gescoord ({}/{})! '.format(BONUSTHEMAS[int(row['Beste'])-1], row['BesteScore'], row['Maximum'])
                     else:
                         tekst = tekst + ', goed ingeschat dus want het was jullie beste thema! '
 
@@ -307,7 +307,7 @@ class Class_Emails():
             reader = csv.DictReader(fr)
             for row in reader:
                 if row['Ploegnaam'] == ploegnaam:
-                    tekst = BONUSTHEMAS[int(row['Origineel'])] + ' ({}/{})'.format(row['OrigineelScore'], row['Maximum'])
+                    tekst = BONUSTHEMAS[int(row['Origineel'])-1] + ' ({}/{})'.format(row['OrigineelScore'], row['Maximum'])
                     return tekst
         return ''
 

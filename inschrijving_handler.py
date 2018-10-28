@@ -85,7 +85,7 @@ class Class_Inschrijvingen():
             if modulo == 0:
                 modulo = 97
             Mededeling = '+++{}{}+++'.format(struct, str(modulo).zfill(2))
-            if TN<MAXIMAALDEELNEMERS:
+            if TN<=MAXIMAALDEELNEMERS:
                 with open(PLOEGINFO, 'a+') as fw:
                     writer = csv.DictWriter(fw, FIELDNAMES)
                     writer.writerow({'IN': IN, 'TN': TN, 'Ploegnaam' : ploegdata[0], 'Voornaam': ploegdata[1] , 'Achternaam': ploegdata[2], 'Email': ploegdata[3], 'Datum': time.strftime('%d/%m/%Y'), 'Mededeling': Mededeling})
@@ -120,6 +120,9 @@ class Class_Inschrijvingen():
         with open(PLOEGINFO, 'wt') as fw:
             writer = csv.writer(fw)
             writer.writerow(DEFHEADERS)
+        with open(WACHTLIJST, 'wt') as fw:
+            writer = csv.writer(fw)
+            writer.writerow(FIELDNAMESWACHTLIJST)
 
     def aanmelden(self, ploeg):
         #Return: Tafelnummer en eventueel het uur waarop er al iemand had aangemeld, indien [] bestaat de ploeg niet
@@ -326,8 +329,9 @@ class Class_Inschrijvingen():
                 aantalInschrijvingen = row['IN']
                 aantalBetaald = aantalBetaald + int(row['Betaald'])
         reader = csv.DictReader(open(WACHTLIJST, 'rt'), delimiter = ',')
-        for i, row in enumerate(reader):
-            aantalInschrijvingen = row['IN']
+        if int(aantalInschrijvingen)>MAXIMAALDEELNEMERS:
+            for i, row in enumerate(reader):
+                aantalInschrijvingen = row['IN']
         result = [aantalAangemeld, aantalHuidigeInschrijvingen, int(aantalInschrijvingen), aantalBetaald]
         return result
 

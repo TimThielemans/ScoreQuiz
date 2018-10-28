@@ -225,7 +225,7 @@ class Class_Scores():
             reader = csv.DictReader(fr)
             next(reader)
             for row in reader:
-                if row['Ploegnaam'] == ploegnaamPositie or row['Positie'] == str(ploegnaamPositie):
+                if row['Ploegnaam'] == ploegnaamPositie or row['Pos'] == str(ploegnaamPositie):
                     return row
         return ''
 

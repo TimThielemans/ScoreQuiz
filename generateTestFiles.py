@@ -26,7 +26,11 @@ def read_Settings():
         global SCANRAW
         global DEFAULT_OUTPUTDIR
 
-        QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
+       # QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
+
+        QUIZFOLDER = '/home/pi/Documents/ScoreQuiz/Test/'
+
+        
         SCANRAW = config.get("COMMON","SCANRAW")
         DEFAULT_OUTPUTDIR = QUIZFOLDER + config.get("PATHS", "RONDEFILES")
 
@@ -52,17 +56,21 @@ def main():
     read_Settings()
     from inschrijving_handler import Class_Inschrijvingen
     from ronde_handler import Class_Rondes
+    from score_handler import Class_Scores
 
     PH = Class_Inschrijvingen()
     RH = Class_Rondes()
+    SH = Class_Scores()
     
+    SH.clearScoresDir()
+    SH.clearImagesDir()
     PH.verwijderAllePloegen()
     RH.verwijderAlleRondes()
-    aantalPloegen = 60
+    aantalPloegen = 64
     for i in range(0, aantalPloegen):
         PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'tim.thielemans@gmail.com'])
         PH.aanmelden('Ploegske{}'.format(i+1))
-        PH.setSchiftingBonus('Ploegske{}'.format(i+1), SCHIFTING*random.uniform(0.5, 1.5), random.randint(1,9))
+        PH.setSchiftingBonus('Ploegske{}'.format(i+1), round(SCHIFTING*random.uniform(0.5, 1.5)), random.randint(1,9))
 
     RH.nieuweRonde(['Ronde1', 'R1', 11, 0, 1])
     RH.nieuweRonde(['Ronde2', 'R2', 11, 0, 1])
@@ -74,14 +82,15 @@ def main():
     RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
     RH.nieuweRonde(['Ronde7', 'R7', 11, 0, 1]) 
     RH.nieuweRonde(['Ronde8', 'R8', 11, 0, 1])
-    RH.nieuweRonde(['Finale', 'Finale', 15, 0, 0])
+    RH.nieuweRonde(['Finale', 'Finale', 16, 0, 0])
 
     with open(DEFAULT_OUTPUTDIR+SCANRAW, 'w') as fw:               
         writer = csv.writer(fw)
+        check = 0
         for i, ronde in enumerate(RH.getRondes()):
             NOQ, SUPER = RH.getVragenSuper(ronde[0])
             for j, ploeg in enumerate(PH.getPloegen()):
-                data = [ronde[0], ploeg[1]]
+                data = [ronde[0], ploeg[1], check]
                 for k in range(0, int(NOQ)):
                     if not SUPER:
                         data.append(random.randint(0, 1))
