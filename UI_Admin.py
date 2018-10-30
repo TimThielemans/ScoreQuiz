@@ -31,6 +31,7 @@ class AdminUI(QtWidgets.QDialog):
         
         self.origineelPBox.currentIndexChanged.connect(self.fillInfoFields)
         self.origineelRBox.currentIndexChanged.connect(self.fillInfoFields)
+        self.origineelWachtlijstPBox.currentIndexChanged.connect(self.fillInfoFields)
         
         self.PAanpassenBtn.clicked.connect(self.updatePloeg)
         self.UitschrijvenBtn.clicked.connect(self.verwijderPloeg)
@@ -39,6 +40,9 @@ class AdminUI(QtWidgets.QDialog):
         self.RNieuwBtn.clicked.connect(self.nieuweRonde)
         self.RAanpassenBtn.clicked.connect(self.updateRonde)
         self.verwijderRBtn.clicked.connect(self.verwijderRonde)
+
+        self.BevestigDeelnameButton.clicked.connect(self.verplaatsPloeg)
+        self.VraagDeelnameBtn.clicked.connect(self.uitnodigenPloeg)
 
         self.RAanmeldenBtn.clicked.connect(self.resetAanmelden)
         self.RPloegenBtn.clicked.connect(self.resetPloegen)
@@ -61,9 +65,12 @@ class AdminUI(QtWidgets.QDialog):
         self.tafelnummerBox.clear()
         self.rondeNummerBox.clear()
         self.origineelRBox.clear()
+        self.origineelWachtlijstPBox.clear()
         for index, ploegnaam in enumerate(self.PH.getPloegNamen()):
             self.origineelPBox.addItem(ploegnaam)
             self.tafelnummerBox.addItem(str(index+1) +': ' +  ploegnaam)
+        for index, ploegnaam in enumerate(self.PH.getPloegNamenWachtlijst()):
+            self.origineelWachtlijstPBox.addItem(ploegnaam)
         for index, rondenaam in enumerate(self.RH.getRondeNames()):
             self.origineelRBox.addItem(rondenaam)
             self.rondeNummerBox.addItem(str(index+1) +': ' +  rondenaam)
@@ -72,12 +79,15 @@ class AdminUI(QtWidgets.QDialog):
         self.tafelnummerBox.setCurrentIndex(-1)
         self.origineelRBox.setCurrentIndex(-1)
         self.rondeNummerBox.setCurrentIndex(-1)
+        self.origineelWachtlijstPBox.setCurrentIndex(-1)
 
     def fillInfoFields(self):
         Pindex = self.origineelPBox.currentIndex()
         Ptext = self.origineelPBox.currentText()
         Rindex = self.origineelRBox.currentIndex()
         Rtext = self.origineelRBox.currentText()
+        Wtext = self.origineelWachtlijstPBox.currentText()
+        Windex = self.origineelWachtlijstPBox.currentIndex()
         if Rindex>-1 and len(Rtext)>1:
             info = self.RH.getRondeInfo(Rtext)
             self.RondenaamTxt.setText(info[1])
@@ -106,6 +116,18 @@ class AdminUI(QtWidgets.QDialog):
             self.VoornaamTxt.setText('')
             self.AchternaamTxt.setText('')
             self.EmailTxt.setText('')
+
+        if Windex>-1 and len(Wtext)>1:
+            info = self.PH.getPloegInfoWachtlijst(Wtext)
+            self.PloegTxt.setText(info[1])
+            self.VoornmTxt.setText(info[2])
+            self.AchternmTxt.setText(info[3])
+            self.MailTxt.setText(info[4])
+        else:
+            self.PloegTxt.setText('')
+            self.VoornmTxt.setText('')
+            self.AchternmTxt.setText('')
+            self.MailTxt.setText('')
 
 
     def emailUitnodiging(self):
@@ -237,6 +259,20 @@ class AdminUI(QtWidgets.QDialog):
                 self.PH.verwijderPloeg(Ptext)
                 self.fillComboBoxes()
 
+
+    def verplaatsPloeg(self):
+        info = self.PH.getPloegInfoWachtlijst(self.origineelWachtlijstPBox.currentText())
+        self.PH.ploegToevoegenWachtlijst(info)
+        self.fillComboBoxes()
+        if self.questionBox('Zeker?', 'Wil je ook een inschrijivngsmail versturen?'):
+            self.EH.bevestigingInschrijving([info[2], info[1], info[3], info[4]])
+        
+
+    def uitnodigenPloeg(self):
+        info = self.PH.getPloegInfoWachtlijst(self.origineelWachtlijstPBox.currentText())
+        self.EH.sendWachtlijstUitnogiding(info)
+
+        
     def updateAllPloegen(self):
         self.PH.autoUpdate()
         #self.PH.sorteerPloegGeneral()

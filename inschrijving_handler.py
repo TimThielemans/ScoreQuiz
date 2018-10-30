@@ -99,7 +99,41 @@ class Class_Inschrijvingen():
             print('niet uniek')
             #inschrijving is niet gelukt want de ploegnaam bestaat al!
             raise ValueError('Ploegnaam is niet uniek!')
-            
+
+    def ploegToevoegenWachtlijst(self, ploeg):
+        dubbelenaam = self.getRowIndex(ploeg[1])
+        if dubbelenaam == 0:
+            numbers = self.aantalPloegen()
+            TN = numbers[1]+1
+            IN = int(ploeg[0])
+            struct = STRUCTBETALING + str(IN).zfill(3)
+            modulo = int(struct.replace('/', ''))%97
+            if modulo == 0:
+                modulo = 97
+            Mededeling = '+++{}{}+++'.format(struct, str(modulo).zfill(2))
+            with open(PLOEGINFO, 'a+') as fw:
+                writer = csv.DictWriter(fw, FIELDNAMES)
+                writer.writerow({'IN': IN, 'TN': TN, 'Ploegnaam' : ploeg[1], 'Voornaam': ploeg[2] , 'Achternaam': ploeg[3], 'Email': ploeg[4], 'Datum': ploeg[5], 'Mededeling': Mededeling})
+            self.autoUpdate()
+            self.verwijderPloegWachtlijst(ploeg[1])
+        else:
+            print('niet uniek')
+            #inschrijving is niet gelukt want de ploegnaam bestaat al!
+            raise ValueError('Ploegnaam is niet uniek!')
+
+    def verwijderPloegWachtlijst(self, ploeg):
+        X = self.getRowIndexWachtlijst(ploeg)
+        if X>0:
+            data = self.getDataWachtlijst()
+            with open(WACHTLIJST, 'w') as fw:
+                writer = csv.writer(fw)
+                writer.writerows(data[0:X])
+                writer.writerows(data[X+1:])
+            self.autoUpdate()
+        else:
+            #Deze ploeg is niet gevonden
+            raise NameError('Not Found')
+
     
     def verwijderPloeg(self, ploeg):
         X = self.getRowIndex(ploeg)
@@ -329,8 +363,8 @@ class Class_Inschrijvingen():
                 aantalInschrijvingen = row['IN']
                 aantalBetaald = aantalBetaald + int(row['Betaald'])
         reader = csv.DictReader(open(WACHTLIJST, 'rt'), delimiter = ',')
-        if int(aantalInschrijvingen)>MAXIMAALDEELNEMERS:
-            for i, row in enumerate(reader):
+        for i, row in enumerate(reader):
+            if int(row['IN'])>int(aantalInschrijvingen):
                 aantalInschrijvingen = row['IN']
         result = [aantalAangemeld, aantalHuidigeInschrijvingen, int(aantalInschrijvingen), aantalBetaald]
         return result
@@ -400,6 +434,14 @@ class Class_Inschrijvingen():
         except NameError:
             raise
 
+    def getPloegInfoWachtlijst(self, ploeg):
+        try:
+            X = self.getRowIndexWachtlijst(ploeg)
+            data = self.getDataWachtlijst()
+            return data[X]
+        except NameError:
+            raise
+
     def getEmail(self, ploeg):
         try:
             X = self.getRowIndex(ploeg)
@@ -433,6 +475,12 @@ class Class_Inschrijvingen():
         aantal = self.aantalPloegen()
         for i in range(0, aantal[1]):
             yield data[i+1][FIELDNAMES.index('Ploegnaam')]
+
+    def getPloegNamenWachtlijst(self):
+        data = self.getDataWachtlijst()
+        aantal = self.aantalPloegen()
+        for i in range(0, len(data)-1):
+            yield data[i+1][FIELDNAMESWACHTLIJST.index('Ploegnaam')]
     
 #==============================DIT ZIJN INTERNE FUNCTIES ============================================
 
@@ -487,6 +535,10 @@ class Class_Inschrijvingen():
     def getData(self):
         with open(PLOEGINFO, 'rt') as fr:
             return list(csv.reader(fr))
+
+    def getDataWachtlijst(self):
+        with open(WACHTLIJST, 'rt') as fr:
+            return list(csv.reader(fr))
         
     def getRowIndex(self, searchValue):
         reader = csv.DictReader(open(PLOEGINFO, 'rt'))
@@ -494,6 +546,13 @@ class Class_Inschrijvingen():
             if unicodedata.normalize('NFKD', row['Ploegnaam']).encode('ASCII', 'ignore') == unicodedata.normalize('NFKD', str(searchValue)).encode('ASCII', 'ignore'):
                 return index+1
             elif row['TN'] == str(searchValue):
+                return index+1
+        return 0
+
+    def getRowIndexWachtlijst(self, searchValue):
+        reader = csv.DictReader(open(WACHTLIJST, 'rt'))
+        for index, row in enumerate(reader):
+            if unicodedata.normalize('NFKD', row['Ploegnaam']).encode('ASCII', 'ignore') == unicodedata.normalize('NFKD', str(searchValue)).encode('ASCII', 'ignore'):
                 return index+1
         return 0
 

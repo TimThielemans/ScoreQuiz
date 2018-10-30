@@ -48,6 +48,8 @@ def read_Settings():
         global HEADERCENTER
         global DATALEFT
         global DATACENTER
+
+        global EMAILVRIJEPLAATS
         
 
         HEADERLEFT = config.get('LAYOUT', 'HEADERLEFT')
@@ -83,6 +85,7 @@ def read_Settings():
         EMAILLASTINFO = QUIZFOLDER + config.get('EMAIL', 'LAATSTEINFO')
         EMAILEINDSTAND = QUIZFOLDER + config.get('EMAIL', 'EINDSTAND')
         EMAILWACHTLIJST = QUIZFOLDER + config.get('EMAIL', 'WACHTLIJST')
+        EMAILVRIJEPLAATS = QUIZFOLDER + config.get('EMAIL', 'VRIJEPLAATS')
 
         INSCHRIJVINGSGELD = config.get('COMMON', 'INSCHRIJVINGSGELD')
         DRANKKAART = config.get('COMMON', 'DRANKKAARTGELD')
@@ -144,6 +147,14 @@ class Class_Emails():
         self.EH.send_HTML_Mail(email, onderwerp, tekst)
         print(email)
 
+    def sendWachtlijstUitnogiding(self, ploeginfo):
+        ploegnaam = ploeginfo[1]
+        email = ploeginfo[4]
+        onderwerp = 'Plaats vrijgekomen 6e Q@C Sinterklaasquiz'
+        template = open(EMAILVRIJEPLAATS).read()
+        tekst = template.format(VOORNAAM = ploeginfo[2], PLOEGNAAM = ploegnaam )
+        self.EH.send_HTML_Mail(email, onderwerp, tekst)
+        print(email)
 
     def sendWrapUp(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']
