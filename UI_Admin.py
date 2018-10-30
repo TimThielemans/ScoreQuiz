@@ -265,7 +265,7 @@ class AdminUI(QtWidgets.QDialog):
         self.PH.ploegToevoegenWachtlijst(info)
         self.fillComboBoxes()
         if self.questionBox('Zeker?', 'Wil je ook een inschrijivngsmail versturen?'):
-            self.EH.bevestigingInschrijving([info[2], info[1], info[3], info[4]])
+            self.EH.bevestigingInschrijving([info[1], info[2], info[3], info[4]])
         
 
     def uitnodigenPloeg(self):
