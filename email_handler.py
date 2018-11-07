@@ -128,12 +128,38 @@ class Class_Emails():
         ploegnaam = ploeginfo['Ploegnaam']
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
-        onderwerp = 'Betaling en QRcode 6e Q@C Sinterklaasquiz'
+        onderwerp = 'Betaling 6e Q@C Sinterklaasquiz'
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nJeugd Sint Cecilia Rotselaar\nBE67731044815587\nEUR38\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        print(email)
+
+    def sendBetalingQR(self, ploeginfo):
+        ploegnaam = ploeginfo['Ploegnaam']
+        mededeling = ploeginfo['Mededeling']
+        email = ploeginfo['Email']
+        onderwerp = 'Betaling 6e Q@C Sinterklaasquiz'
+        filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nJeugd Sint Cecilia Rotselaar\nBE67731044815587\nEUR38\n\n{}'.format(mededeling)
+        pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        template = open(EMAILBETALINGSVRAAG).read()
+        tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        print(email)
+
+    def sendBetalingQRSimpel(self, ploeginfo):
+        ploegnaam = ploeginfo[2]
+        mededeling = ploeginfo[11]
+        email = ploeginfo[5]
+        onderwerp = 'Betaling 6e Q@C Sinterklaasquiz'
+        filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nJeugd Sint Cecilia Rotselaar\nBE67731044815587\nEUR38\n\n{}'.format(mededeling)
+        pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        template = open(EMAILBETALINGSVRAAG).read()
+        tekst = template.format(VOORNAAM = ploeginfo[3], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
         self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
 

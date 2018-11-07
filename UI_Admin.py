@@ -36,6 +36,7 @@ class AdminUI(QtWidgets.QDialog):
         self.PAanpassenBtn.clicked.connect(self.updatePloeg)
         self.UitschrijvenBtn.clicked.connect(self.verwijderPloeg)
         self.updatenPBtn.clicked.connect(self.updateAllPloegen)
+        self.betalingMailBtn.clicked.connect(self.sendBetalingEmailPloeg)
 
         self.RNieuwBtn.clicked.connect(self.nieuweRonde)
         self.RAanpassenBtn.clicked.connect(self.updateRonde)
@@ -258,6 +259,12 @@ class AdminUI(QtWidgets.QDialog):
             if self.questionBox('Ploeg verwijderen?', 'Zeker dat je {} wilt uitschrijven?'.format(Ptext)):
                 self.PH.verwijderPloeg(Ptext)
                 self.fillComboBoxes()
+
+    def sendBetalingEmailPloeg(self):
+        Ptext = self.origineelPBox.currentText()
+        info = self.PH.getPloegInfo(Ptext)
+        if self.questionBox('Zeker?', 'Zeker dat je de betaling wil versturen naar deze ploeg? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+            self.EH.sendBetalingQRSimpel(info)
 
 
     def verplaatsPloeg(self):
