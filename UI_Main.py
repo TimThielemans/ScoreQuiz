@@ -2,7 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt
 import configparser
-import os, parser
+import os, parser, webbrowser
 import sys
 
 sys.path.append('code/')
@@ -63,7 +63,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 1
+        debug = 0
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()
@@ -120,7 +120,7 @@ class startScherm(QtWidgets.QMainWindow):
     def scorebord(self):
         qm = QtWidgets.QMessageBox()
         answer = qm.question(QtWidgets.QDialog(), 'Bonus berekening', 'Bereken ook de optimale bonus? (enkel eenmaal bij de eindstand)', qm.Yes | qm.No)
-        geenBonus, geenSchifting, ontbreekt, fout = self.SH.generateScorebord(answer == qm.Yes)
+        geenBonus, geenSchifting, ontbreekt, fout, filenameFull = self.SH.generateScorebord(answer == qm.Yes)
         fouten = False
         info = ''
         if len(geenBonus)>0:
@@ -143,6 +143,8 @@ class startScherm(QtWidgets.QMainWindow):
             text = 'Het scorebord werd berekend zonder fouten!'
             titel = 'Klaar'
         self.msgBox(text, titel)
+
+        webbrowser.open('file://' + os.path.realpath(filenameFull))
 
     def admin(self):
         wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)

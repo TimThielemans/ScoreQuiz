@@ -1,25 +1,207 @@
+<!doctype html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Embedded Style Sheet</title>
-<link href="style.css" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/handsontable-pro@latest/dist/handsontable.full.min.css">
+<link rel="stylesheet" type="text/css" href="https://handsontable.com/static/css/main.css">
+<script src="https://cdn.jsdelivr.net/npm/handsontable-pro@latest/dist/handsontable.full.min.js"></script>
+
+<style>
+
+h3{
+	text-align: center;
+	margin-bottom: 1%;
+	margin-top: 1%;
+	font-size:30px;
+}
+p{
+	text-align: center;
+	bottom: 0;
+	font-size:30px;
+	color: #480000 ;
+}
+
+
+html {
+    position: relative;
+    min-height: 100%;
+    max-height: 100%;
+}
+
+body {
+    margin: 0 0 0 0;
+    /* bottom = footer height */
+	background-image: url("http://www.designbolts.com/wp-content/uploads/2013/02/Free-Seamless-Wood-Textures-Patterns-For-3D-Mapping-2.jpg");
+}
+
+footer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 50px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.tg-wrap {margin-left: 2%;
+margin-right: 2%;
+overflow: auto}
+.handsontable table thead th{
+        background-color: green;
+	color: white;
+        font-weight:bold;
+        font-size:30px;
+    }
+
+
+
+</style>
 </head>
 <body>
-
-<div class="tg-wrap">
-
-<h3>Scorebord 6e  Q@C Sinterklaasquiz</h3>
-<table id="scorebord" class="tg">
-  	<thead>
-	{HEADERS}
-	</thead>
-	<tbody>
-	{BODY}
-	</tbody>
-</table>
-<p>Scorebord TimTQuiz 2018</p>
+<div class="screen-wrap">
+<h3>Scorebord 6e Q@C Sinterklaasquiz (TimT2018)</h3>
+<div id="hot" class="tg-wrap"></div>
 </div>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
-<script src="script.js"></script>
+
+
+
+
+
+
+
+<script>
+var dataObject2 = [{BODY}
+  ],
+  container,
+  hot1;
+
+function firstRowRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.background = '#ccbdb9';
+  td.style.fontSize = '180%';
+  td.style.textAlign = 'center';
+};
+
+function secondRowRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'bold';
+
+  td.style.background = '#ccbdb9';
+  td.style.fontSize = '200%';
+  td.style.textAlign = 'center';
+};
+
+function firstRowHiddenRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.color = '#ccbdb9';
+  td.style.fontWeight = 'bold';
+  td.style.background = '#ccbdb9';
+  td.style.fontSize = '200%';
+  td.style.textAlign = 'center';
+};
+
+function IDRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'normal';
+  td.style.fontSize = '200%';
+  td.style.textAlign = 'center';
+};
+
+function ploegRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'normal';
+  td.style.fontSize = '200%';
+  td.style.textAlign = 'left';
+};
+
+function totaalRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'bold';
+  td.style.background = '#b3b7aa';
+  td.style.fontSize = '200%';
+  td.style.textAlign = 'center';
+};
+
+function scoreRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'normal';
+  td.style.textAlign = 'center';
+  td.style.fontSize = '200%';
+};
+
+function allesJuistRenderer(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.renderers.TextRenderer.apply(this, arguments);
+  td.style.fontWeight = 'bold';
+  td.style.color = 'green';
+  td.style.background = '#CEC';
+  td.style.textAlign = 'center';
+  td.style.fontSize = '200%';
+};
+
+
+var hotElement = document.querySelector('#hot');
+var hotElementContainer = hotElement.parentNode;
+var hotSettings = {
+  readOnly: true,
+  data: dataObject2,
+  className: "htMiddle",
+  stretchH: 'all',
+  autoWrapRow: true,
+  rowHeights: 40,
+  maxRows: 100,
+  manualRowResize: true,
+  manualColumnResize: true,
+  rowHeaders: false,
+  colHeaders: [{HEADERS}],
+  columnSorting: {
+    indicator: true
+  },
+  autoColumnSize: {
+    samplingRatio: 100
+  },
+  fixedRowsTop: 2,
+  fixedColumnsLeft: 4,
+
+  cells: function (row, col) {
+    var cellProperties = {};
+    var data = this.instance.getData();
+
+    if (col === 0) {
+      cellProperties.renderer = IDRenderer; // uses function directly
+    }
+
+    else if (col === 1 ){
+	cellProperties.renderer = ploegRenderer; // uses function directly
+    }
+    else if (col < 4 ){
+	cellProperties.renderer = totaalRenderer; // uses function directly
+    }
+    else{
+	cellProperties.renderer = scoreRenderer; // uses function directly
+    }
+   
+    if (row === 0){
+	cellProperties.renderer = firstRowRenderer; // uses function directly
+	if (col<1){
+		cellProperties.renderer = firstRowHiddenRenderer; // uses function directly
+	}
+    }
+
+    if (row === 1){
+	cellProperties.renderer = secondRowRenderer; // uses function directly
+	if (col<1 || data[0][col] == ''){
+		cellProperties.renderer = firstRowHiddenRenderer; // uses function directly
+	}
+    }
+	
+   if (col>3 && row >1 && data[row][col] === data[1][col]){
+	cellProperties.renderer = allesJuistRenderer; // uses function directly
+   }
+    return cellProperties;
+  }
+
+
+};
+var hot = new Handsontable(hotElement, hotSettings);
+</script>
 </body>
 </html>

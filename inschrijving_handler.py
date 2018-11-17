@@ -402,8 +402,9 @@ class Class_Inschrijvingen():
             Y1 = FIELDNAMES.index('Schifting')
             Y2 = FIELDNAMES.index('Bonus')
             data = self.getData()
-            if int(data[X][FIELDNAMES.index('Aangemeld')])>0:
-                return int(data[X][Y1]), int(data[X][Y2])
+            if X>0:
+                if int(data[X][FIELDNAMES.index('Aangemeld')])>0:
+                    return int(data[X][Y1]), int(data[X][Y2])
             return 0, 999
         except NameError:
             raise

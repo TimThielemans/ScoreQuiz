@@ -14,6 +14,7 @@ class Control(QtWidgets.QMainWindow):
         self.nextBtn.clicked.connect(self.nextFile)
         self.updateScoreBtn.clicked.connect(self.updateScore)
         self.allesJustBtn.clicked.connect(self.allesOverzetten)
+        self.discardBtn.hide()
 
     def closeEvent(self, event):
         self.SH.fromScannerToUser()

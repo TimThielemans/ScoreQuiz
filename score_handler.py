@@ -560,7 +560,7 @@ class Class_Scores():
         global ROW1
         
         FIELDNAMES = ['Pos', 'TN', 'Ploegnaam', 'Score', '%']
-        ROW1 = ['', '', '','', '100']
+        ROW1 = ['0', '0', 'Maximum','', '100']
 
         with open(SCOREBORDINFO, 'rt') as fr:
             readerInfo = csv.DictReader(fr)
@@ -569,7 +569,7 @@ class Class_Scores():
                 ROW1.append(int(row['Maximum']))
         ROW1[3] = sum(ROW1[5:])
         FIELDNAMES.append('Schifting')
-        ROW1.append('')
+        ROW1.append(SCHIFTING)
         FIELDNAMES.append('NormSchifting')
         ROW1.append('')
         
@@ -627,13 +627,41 @@ class Class_Scores():
                 geenScoresBeschikbaar = False
                 
                 
+        maximumScore = 0
+        gemiddeldeScore = 0
+        gemiddeldes = []
 
+        with open(SCOREBORDINFO, 'rt') as fr1:
+            reader = csv.DictReader(fr1)
+            for usedRound in reader:
+                rondeNaam= usedRound['Ronde']
+                maximumRondeScore = 0
+                gemiddeldeRondeScore = 0
+                eigenRondeScore = 0
+                with open(RONDEFILES + FINALPREFIX + rondeNaam + '.csv', 'rt') as fr:
+                    reader = csv.reader(fr)    
+                    for row in reader:
+                        if 'Max/Gem' in row:
+                            maximumRondeScore = row[0]
+                            gemiddeldeRondeScore = round(float(row[1]),1)
+                            gemiddeldes.append(gemiddeldeRondeScore)
+
+                maximumScore = int(maximumRondeScore)+ maximumScore
+                gemiddeldeScore = float(gemiddeldeRondeScore) + gemiddeldeScore
+
+        newRow = ['0', '0', 'Gemiddelde', gemiddeldeScore, float(round(gemiddeldeScore/maximumScore*100))]
+        newRow = newRow + gemiddeldes
+        newRow.append('') #schifting
+        newRow.append('') #normschifting
+        
+        
         #sorteren
         if not geenScoresBeschikbaar:
             with open(tmp, mode='rt') as fr, open(SCOREBORD, 'w') as fw:
                 writer = csv.writer(fw)
                 reader = csv.reader(fr)
                 writer.writerow(FIELDNAMES)
+                writer.writerow(newRow)
                 writer.writerow(ROW1)
                 next(reader)
                 next(reader) 
@@ -641,104 +669,52 @@ class Class_Scores():
                 for positie, row in enumerate(sorted2):
                     writer.writerow([positie+1] + row[1:])
 
-            print('makeScorebord:',time.time()-a)
-            if bonusGeneration:
-                self.generateBonusOverview()
-            print('generate BonusOverview:',time.time()-a)
-            
 
+        print('makeScorebord:',time.time()-a)
+        if bonusGeneration:
+            self.generateBonusOverview()
+        print('generate BonusOverview:',time.time()-a)
+            
         try:
             os.remove(tmp)
         except OSError:
             pass
         
         self.visualizeScorebord()
-        return geenBonus, geenSchifting, ontbreekt, fout
+        return geenBonus, geenSchifting, ontbreekt, fout, SCOREHTMLFULL
 
     def visualizeScorebord(self):
-        headersfull = ''
-        headerslast = ''
-        bodyfull = ''
-        bodylast = ''
-        template = open(SCORETEMPLATEHTML).read()
-        headerValues = []
-        withTablenummer = 0 
-
-        if withTablenummer == 0:
-            lastindexes = [0,1,2,3,4]
-        else:
-            lastindexes = [0,2,3,4]
-        
+        headers = ''
+        body = ''
+                
         with open(SCOREBORD, mode='rt') as fr: 
             reader = csv.reader(fr)
             row1 = next(reader)
-            row2 = next(reader)
-
-            if len(row1)>=AANTALTUSSENSTAND+5+2: #schifting en normschifting hoeven er ook niet in te zitten
-                lastindexes.extend(range(len(row1)-2-AANTALTUSSENSTAND, len(row1)-2))
-            else:
-                lastindexes = range(0, len(row1)-2)
-
-            headersfull = headersfull + '<th class="tg-0pky">No</th>'
-            headersfull = headersfull + '<th class="tg-0pky">TN</th>'
-            headersfull = headersfull + '<th class="tg-0pky">Ploegnaam</th>'
-
-            headerslast = headerslast + '<th class="tg-0pky">No</th>'
-            if withTablenummer == 1:
-                headerslast = headerslast + '<th class="tg-0pky">TN</th>'
-            headerslast = headerslast + '<th class="tg-0pky">Ploegnaam</th>'
-            
+            headers = headers + '"Pos"'
+            headers = headers + ', "Ploegnaam"'
             for i in range(3, len(row1)-1):
-                headersfull = headersfull +  '<th class="tg-c3ow">{}</br>{}</th>'.format(row1[i], row2[i])
-                if i in lastindexes:
-                    headerslast = headerslast + '<th class="tg-c3ow">{}</br>{}</th>'.format(row1[i], row2[i])
+                headers = headers + ', "{}"'.format(row1[i])
 
             for i, row in enumerate(reader):
-                bodylast = bodylast + '<tr tabindex="{}">'.format(i) + '<td class="tg-0pky">{}</td>'.format(row[0])
-                if withTablenummer == 1:
-                    bodylast = bodylast + '<td class="tg-0pky">{}</td>'.format(row[1])
-                
+                body = body + '["{}"'.format(row[0])                
                 ploegnaam = row[2]
-                if len(ploegnaam)>25:
-                    ploegnaam= ploegnaam[:24]+'..'
-                bodylast = bodylast + '<td class="tg-0pky">{}</td>'.format(ploegnaam)
-                bodylast = bodylast + '<td class="tg-mqa1">{}</td>'.format(row[3]) + '<td class="tg-mqa1">{}</td>'.format(row[4])
-
-                bodyfull = bodyfull + '<tr tabindex="{}">'.format(i) + '<td class="tg-0pky">{}</td>'.format(row[0])
-                bodyfull = bodyfull + '<td class="tg-0pky">{}</td>'.format(row[1])
-                bodyfull = bodyfull + '<td class="tg-0pky">{}</td>'.format(row[2])
-                bodyfull = bodyfull + '<td class="tg-mqa1">{}</td>'.format(row[3]) + '<td class="tg-mqa1">{}</td>'.format(row[4])
+               # if len(ploegnaam)>25:
+               #     ploegnaam= ploegnaam[:24]+'..'
+                body = body + ', "{}"'.format(ploegnaam)
+                body = body + ', "{}"'.format(row[3])
+                body = body + ', "{}"'.format(row[4])
                 for j in range(5, len(row)-1):#norm schifting moet er niet in
-                    newstring = '<td class="tg-c3ow">{}</td>'.format(row[j])
-                    bodyfull = bodyfull + newstring
-                    if j in lastindexes:
-                        bodylast = bodylast + newstring
-
-                bodyfull = bodyfull + '</tr>'
-                bodylast = bodylast + '</tr>'
-
-        fullHTML  = open(SCOREHTMLFULL,"w")
-        fullHTML.write(template.format(HEADERS = headersfull, BODY = bodyfull))
+                    body = body + ', "{}"'.format(row[j])
+                body = body + '],'
+        
+        template = open(SCORETEMPLATEHTML).read()
+        fullHTML = open(SCOREHTMLFULL,"w")
+        template = template.replace('{BODY}', body)
+        template = template.replace('{HEADERS}', headers)
+        fullHTML.write(template)
         fullHTML.close()
-        lastHTML  = open(SCOREHTMLLAST,"w")
-        lastHTML.write(template.format(HEADERS = headerslast, BODY = bodylast))
-        lastHTML.close()
-
         
-        templatestyle = open(CSSTEMPLATE).read()
-        style  = open(CSSFINAL,"w")
-        style.write(templatestyle)
-        style.close()
-        templatescript = open(JSTEMPLATE).read()
-        script  = open(JSFINAL,"w")
-        script.write(templatescript)
-        script.close()
-
-        a = SCOREHTMLLAST.split('/')
-        b = SCORETEMPLATEHTML.split('/')
-        shutil.copy(SCORETEMPLATEHTML.replace(b[len(b)-1], 'background.jpg'), SCOREHTMLLAST.replace(a[len(a)-1], 'background.jpg'))
-        
-
+           
             
 
             
