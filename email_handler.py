@@ -48,7 +48,7 @@ def read_Settings():
         global HEADERCENTER
         global DATALEFT
         global DATACENTER
-
+        global SCOREHTMLFULL
         global EMAILVRIJEPLAATS
         
 
@@ -61,6 +61,7 @@ def read_Settings():
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         FINALPREFIX = config.get('COMMON', 'FINALPREFIX')
         MOEILIJKTRESHOLD = float(config.get('COMMON', 'MOEILIJKTRESHOLD'))
+        SCOREHTMLFULL = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLFULL')
         SCOREBORD = QUIZFOLDER + config.get('PATHS', 'SCOREBORD')
         RONDEFILES = QUIZFOLDER +config.get('PATHS', 'RONDEFILES')
         SCOREBORDINFO = QUIZFOLDER + config.get('PATHS', 'SCOREBORDINFO')
@@ -167,7 +168,7 @@ class Class_Emails():
         ploegnaam = ploeginfo['Ploegnaam']
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
-        onderwerp = 'Herinnering betaling 6e Q@C Sinterklaasquiz'
+        onderwerp = 'Herinnering betaling 6e Q@C Sinterklaasquiz 7/12/2018'
         template = open(EMAILBETALINGSHERINNERING).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
         self.EH.send_HTML_Mail(email, onderwerp, tekst)
@@ -185,14 +186,14 @@ class Class_Emails():
     def sendWrapUp(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']
         email = ploeginfo['Email']
-        onderwerp = 'Laatste informatie 6e Q@C Sinterklaasquiz'
+        onderwerp = 'Laatste informatie 6e Q@C Sinterklaasquiz 7/12/2018'
         filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
 
         if bool(int(ploeginfo['Betaald'])):
             mededeling = 'We hebben uw betaling van €{} goed ontvangen'.format(ploeginfo['Bedrag'])
         else:
-            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €20 klaar bij het aanmelden :) Het heeft in ieder geval geen zin om nu nog over te schrijven aangezien die betaling waarschijnlijk nog niet verwerkt is tegen vrijdag.'
+            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €20 klaar bij het aanmelden of schrijf nog over VOOR woensdagavond 5/12/2018 :) Het heeft geen zin om na woensdagavond nog over te schrijven aangezien die betaling misschien nog niet verwerkt is tegen vrijdag.'
 
         template = open(EMAILLASTINFO).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, BETALINGTEKST = mededeling)
@@ -311,8 +312,8 @@ class Class_Emails():
             tafelnummer = eindstandPloeg['TN']
             email = self.PH.getEmail(ploegnaam)
             onderwerp = 'Evaluatie en Score 6e Q@C Sinterklaasquiz'
-            #AANPASSEN naar geland wat de schiftingsvraag was
-            schifting = str(SCHIFTING) + ' gram'
+            #AANPASSEN naar gelang wat de schiftingsvraag was
+            schifting = str(SCHIFTING) + ' kcal'
             positie = str(pos) + 'e'
 
             bonusTekst = self.generateBonusTekst(ploegnaam)
@@ -322,9 +323,24 @@ class Class_Emails():
             
             template = open(EMAILEINDSTAND).read()
             tekst = template.format(PLOEGNAAM = ploegnaam, EINDPOSITIE = positie, AANTALDEELNEMERS = aantalDeelnemers, MOEILIJK = MOEILIJKTRESHOLD*100, BONUSTEKST = bonusTekst, SCHIFTINGSANTWOORD = schifting, EIGENOVERZICHT = rondescores, EINDSTANDNABIJ = eindstand, SCOREWINNAARS = winnaars)
-            self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
+            #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
+            tmp = MOEILIJK.split('/')
+            filename1 = tmp[len(tmp)-1]
+            tmp = SCOREHTMLFULL.split('/')
+            filename2 = tmp[len(tmp)-1]
+            self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
             print(pos, email)
 
+    def sendTussenstandToTim(self):
+        aantalDeelnemers,_,_,_ = self.PH.aantalPloegen()
+        self.worstAnsweredQuestions(aantalDeelnemers)
+        email = 'timtquiz@gmail.com'
+        onderwerp = 'Score 6e Sinterklaasquiz: Projectie'
+        tekst = 'Goedenavond mezelf, hierbij de tussen- of eindstand. Groetjes van de jury'
+        tmp = SCOREHTMLFULL.split('/')
+        filename2 = tmp[len(tmp)-1]
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, SCOREHTMLFULL, filename2)
+        
     def generateBonusTekst(self, ploegnaam):
         with open(BONUSOVERVIEW, 'rt') as fr:
             reader = csv.DictReader(fr)

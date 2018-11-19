@@ -63,7 +63,7 @@ class startScherm(QtWidgets.QMainWindow):
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
         
-        debug = 0
+        debug = 1
         default = 'Test/'
         if debug == 1:
             dialog = QtWidgets.QFileDialog()
@@ -144,8 +144,24 @@ class startScherm(QtWidgets.QMainWindow):
             titel = 'Klaar'
         self.msgBox(text, titel)
 
-        webbrowser.open('file://' + os.path.realpath(filenameFull))
+        msg = QtWidgets.QMessageBox()
+        msg.setText('Hoe wil je het scorebord bekijken?')
+        buttonOpenHTML = QtWidgets.QPushButton('Nieuwe HTML openen')
+        buttonDoorsturen = QtWidgets.QPushButton('Doorsturen voor projectie')
+        buttonNiets = QtWidgets.QPushButton('Niets, ik vernieuw zelf wel')
+        msg.addButton(buttonOpenHTML, 0)
+        msg.addButton(buttonDoorsturen, 1)
+        msg.addButton(buttonNiets, 2)
+        reply = msg.exec()
+        if reply == 0:
+            webbrowser.open('file://' + os.path.realpath(filenameFull))
+        elif reply == 1:
+            from email_handler import Class_Emails
+            self.EH = Class_Emails()
+            self.EH.sendTussenstandToTim()
 
+            
+            
     def admin(self):
         wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
         if ok and wachtwoord == WACHTWOORD:

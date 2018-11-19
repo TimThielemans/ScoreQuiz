@@ -86,6 +86,30 @@ class Class_EmailSender():
         #Send Mail
         self.session.sendmail(FROM_ADD, [To_Add], Mail_Body.as_string())
 
+    def send_HTML_Double_Attachment_Mail(self, To_Add, Subject, htmlMessage, path1, filename1, path2, filename2):
+        Mail_Body = self.initialise_Mail_Body(To_Add, Subject)
+        #Attach Mail Message
+        Mail_Msg = MIMEText(htmlMessage, 'html')
+
+        attachment1 = open(path1, "rb")         
+        Mail_Attachment1 = MIMEBase('application', 'octet-stream')
+        Mail_Attachment1.set_payload((attachment1).read())
+        encoders.encode_base64(Mail_Attachment1)
+        Mail_Attachment1.add_header('Content-Disposition', "attachment; filename= %s" % filename1)
+
+        attachment2 = open(path2, "rb")         
+        Mail_Attachment2 = MIMEBase('application', 'octet-stream')
+        Mail_Attachment2.set_payload((attachment2).read())
+        encoders.encode_base64(Mail_Attachment2)
+        Mail_Attachment2.add_header('Content-Disposition', "attachment; filename= %s" % filename2)
+                
+        
+        Mail_Body.attach(Mail_Msg)
+        Mail_Body.attach(Mail_Attachment1)
+        Mail_Body.attach(Mail_Attachment2)
+        #Send Mail
+        self.session.sendmail(FROM_ADD, [To_Add], Mail_Body.as_string())
+
         
     def __del__(self):
         self.session.close()

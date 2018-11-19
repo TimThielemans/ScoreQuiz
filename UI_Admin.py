@@ -59,6 +59,14 @@ class AdminUI(QtWidgets.QDialog):
         self.UitnodigingBtn.clicked.connect(self.emailUitnodiging)
 
         self.updateOverzichtBtn.clicked.connect(self.saveOverzicht)
+
+        self.uploadOnlineBtn.clicked.connect(self.uploadLive)
+
+    def uploadLive(self):
+        if self.questionBox('Zeker?', 'Zeker dat je de (voorlopige) tussenstand online wil zwieren zodat iedereen hem kan zien?'):
+            self.SH.uploadScorebordPublic()
+
+        
         
 
     def fillComboBoxes(self):

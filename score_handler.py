@@ -6,6 +6,7 @@ import shutil
 import itertools
 import configparser, inspect, os
 import statistics
+import ftplib
 
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
@@ -35,6 +36,9 @@ def read_Settings():
         global JSFINAL
         global JSTEMPLATE
         global AANTALTUSSENSTAND
+        global FTPSERVER
+        global FTPUSER
+        global FTPPASSWORD
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         SCOREBORD = QUIZFOLDER+config.get('PATHS', 'SCOREBORD')
@@ -59,6 +63,10 @@ def read_Settings():
         USERPREFIX = config.get("COMMON","USERPREFIX")
         FINALPREFIX = config.get("COMMON","FINALPREFIX")
         JPGPREFIX = config.get('COMMON', 'JPGPREFIX')
+
+        FTPSERVER = config.get('COMMON', 'FTPSERVER')
+        FTPUSER = config.get('COMMON', 'FTPUSER')
+        FTPPASSWORD = config.get('COMMON', 'FTPPASSWORD')
         
     except Exception as error_msg:
         print("Error while trying to read Settings.")
@@ -649,7 +657,7 @@ class Class_Scores():
                 maximumScore = int(maximumRondeScore)+ maximumScore
                 gemiddeldeScore = float(gemiddeldeRondeScore) + gemiddeldeScore
 
-        newRow = ['0', '0', 'Gemiddelde', gemiddeldeScore, float(round(gemiddeldeScore/maximumScore*100))]
+        newRow = ['0', '0', 'Gemiddelde', round(float(gemiddeldeScore), 2), round(float(gemiddeldeScore/maximumScore*100), 2)]
         newRow = newRow + gemiddeldes
         newRow.append('') #schifting
         newRow.append('') #normschifting
@@ -713,8 +721,28 @@ class Class_Scores():
         template = template.replace('{HEADERS}', headers)
         fullHTML.write(template)
         fullHTML.close()
-        
-           
+
+        self.uploadScorebordLive()
+
+
+    def uploadScorebordPublic(self):
+        ftp = ftplib.FTP(FTPSERVER)
+        ftp.login(FTPUSER, FTPPASSWORD)  
+        remote_path = "/htdocs/ScorebordFiles"
+        ftp.cwd(remote_path)
+        fh = open(SCOREHTMLFULL, 'rb')
+        ftp.storbinary('STOR Sinterklaasquiz2018.html', fh)
+        fh.close()
+
+    def uploadScorebordLive(self):
+        ftp = ftplib.FTP(FTPSERVER)
+        ftp.login(FTPUSER, FTPPASSWORD)  
+        remote_path = "/htdocs/ScorebordFiles"
+        ftp.cwd(remote_path)
+        fh = open(SCOREHTMLFULL, 'rb')
+        ftp.storbinary('STOR goLiveTim.html', fh)
+        fh.close()
+
             
 
             

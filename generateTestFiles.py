@@ -66,7 +66,7 @@ def main():
     SH.clearImagesDir()
     PH.verwijderAllePloegen()
     RH.verwijderAlleRondes()
-    aantalPloegen = 64
+    aantalPloegen = 70
     for i in range(0, aantalPloegen):
         PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'tim.thielemans@gmail.com'])
         PH.aanmelden('Ploegske{}'.format(i+1))
