@@ -225,13 +225,19 @@ def get_processedImage(source_file):
     im_orig = cv2.imread(source_file)
     #print('reading' + str(time.time()-b))
     heigth, width = im_orig.shape[0:2]
+
+
+################################# DIT AANPASSEN AAN DE HAND VAN DE RONDE FILES #########################################################################
+
     
     if not JPGPREFIX + '0_' in source_file:
-        im_orig = im_orig[0.07*heigth:0.93*heigth, 0.65*width:0.98*width]
+        im_orig = im_orig[0.07*heigth:0.93*heigth, 0.6*width:0.98*width]
         #print('cut' + str(time.time()-b))
     else:
         #schiftingsformulier heeft andere marges
-        im_orig = im_orig[0.2*heigth:0.9*heigth, 0.2*width:0.9*width]
+        im_orig = im_orig[0.3*heigth:0.92*heigth, 0.3*width:0.93*width]
+
+######################################################## EINDE AANPASSEN #####################################################################
         
         
   #  blurred = cv2.GaussianBlur(im_orig, (11, 11), 10)    

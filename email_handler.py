@@ -169,9 +169,12 @@ class Class_Emails():
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
         onderwerp = 'Herinnering betaling 6e Q@C Sinterklaasquiz 7/12/2018'
+        filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nJeugd Sint Cecilia Rotselaar\nBE67731044815587\nEUR38\n\n{}'.format(mededeling)
+        pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSHERINNERING).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
-        self.EH.send_HTML_Mail(email, onderwerp, tekst)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
 
     def sendWachtlijstUitnogiding(self, ploeginfo):

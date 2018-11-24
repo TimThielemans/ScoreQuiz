@@ -44,14 +44,14 @@ def read_Settings():
         FIELDNAMES = next(f)
         del f
 
-        global FIELDNAMESWACHTLIJST
-        f = csv.reader(open(WACHTLIJST, 'rt'), delimiter = ',')
-        FIELDNAMESWACHTLIJST = next(f)
-        del f
-
         global DEFHEADERS
         f = csv.reader(open(HEADERSPATH, 'rt'), delimiter = ',')
         DEFHEADERS = next(f)
+        del f
+
+        global FIELDNAMESWACHTLIJST
+        f = csv.reader(open(WACHTLIJST, 'rt'), delimiter = ',')
+        FIELDNAMESWACHTLIJST = next(f)
         del f
         
         
