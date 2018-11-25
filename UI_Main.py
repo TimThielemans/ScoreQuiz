@@ -1,8 +1,15 @@
+#! usr/bin/env python3
+
+
+import os
+os.chdir('/home/pi/Documents/ScoreQuiz')
+
+
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtGui import QPalette
 from PyQt5.QtCore import Qt
 import configparser
-import os, parser, webbrowser
+import parser, webbrowser
 import sys
 
 sys.path.append('code/')

@@ -446,29 +446,36 @@ class Class_Emails():
         moeilijkeVragen = []
         antwoorden = self.getAntwoorden()
         for index, file in enumerate(filenames):
-            with open(file, 'rt') as fr:
-                reader =csv.reader(fr)
-                if 'Bonus' in next(reader):
-                    compensatieBonus = 1
-                else:
-                    compensatieBonus = 0
-                if self.RH.isSuperRonde(rondenummer[index]) == 1:
-                    superronde = True
-                else:
-                    superronde = False
-                for row in reader:
-                    if 'Max/Gem' in row:
-                        aantalJuist = row[2:len(row)-1]
-                        aantalJuist = list(map(int, aantalJuist))
-                        for i in range(0, len(aantalJuist)-compensatieBonus):
-                            if aantalJuist[i]<=antwoordLimiet:
-                                if not superronde:
-                                    VN = i+1
-                                    moeilijkeVragen.append([rondenaam[index], VN, aantalJuist[i], antwoorden[rondenummer[index]-1][VN]])
-                                elif i%3 == 2:
-                                    VN = int((i+1)/3)
-                                    moeilijkeVragen.append([rondenaam[index], str(VN)+'c', aantalJuist[i], antwoorden[rondenummer[index]-1][i+1]])
-                                        
+            try:
+                RNaam =rondenaam[index]
+                RN = rondenummer[index]
+                with open(file, 'rt') as fr:
+                    reader =csv.reader(fr)
+                    if 'Bonus' in next(reader):
+                        compensatieBonus = 1
+                    else:
+                        compensatieBonus = 0
+                    if self.RH.isSuperRonde(RN) == 1:
+                        superronde = True
+                    else:
+                        superronde = False
+                    for row in reader:
+                        if 'Max/Gem' in row:
+                            aantalJuist = row[2:len(row)-1]
+                            aantalJuist = list(map(int, aantalJuist))
+                            for i in range(0, len(aantalJuist)-compensatieBonus):
+                                if aantalJuist[i]<=antwoordLimiet:
+                                    if not superronde:
+                                        VN = i+1
+                                        moeilijkeVragen.append([RNaam, VN, aantalJuist[i], antwoorden[RN-1][VN]])
+                                    elif i%3 == 2:
+                                        VN = int((i+1)/3)
+                                        moeilijkeVragen.append([RNaam, str(VN)+'c', aantalJuist[i], antwoorden[RN-1][i+1]])
+            except:
+                print('Fout!')
+                print(index, rondenaam, rondenummer)
+                print(RNaam, RN, VN)
+                pass                                        
         
         moeilijkeVragen = sorted(moeilijkeVragen,key=lambda x: (x[2], x[0]))
         
