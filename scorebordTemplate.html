@@ -161,6 +161,8 @@ var hotSettings = {
   manualColumnResize: true,
   rowHeaders: false,
   colHeaders: [{HEADERS}],
+  
+  <!-- colWidths: [60, 300, 70, 70], -->
   columnSorting: {
     indicator: true
   },
@@ -169,6 +171,12 @@ var hotSettings = {
   },
   fixedRowsTop: 2,
   fixedColumnsLeft: 4,
+  modifyColWidth: function(width, col){
+      if(width > 350){
+      	return 348
+      }
+  },
+  
 
   cells: function (row, col) {
     var cellProperties = {};

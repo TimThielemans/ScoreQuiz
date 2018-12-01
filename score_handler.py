@@ -700,7 +700,8 @@ class Class_Scores():
             row1 = next(reader)
             headers = headers + '"Pos"'
             headers = headers + ', "Ploegnaam"'
-            for i in range(3, len(row1)-1):
+            headers = headers + ', "Tot"'
+            for i in range(4, len(row1)-1):
                 headers = headers + ', "{}"'.format(row1[i])
 
             for i, row in enumerate(reader):
@@ -714,6 +715,8 @@ class Class_Scores():
                 for j in range(5, len(row)-1):#norm schifting moet er niet in
                     body = body + ', "{}"'.format(row[j])
                 body = body + '],'
+
+        
         
         template = open(SCORETEMPLATEHTML).read()
         fullHTML = open(SCOREHTMLFULL,"w")

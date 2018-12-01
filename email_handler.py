@@ -417,13 +417,16 @@ class Class_Emails():
 
         nabijescores = self.SH.getFinalScores(positie, aantalPloegen, aantalPlusMin)
         for scores in nabijescores:
-            ploegnaam = scores[2]
-            ploegnaam = (ploegnaam[:18] + '..') if len(ploegnaam) > 18 else ploegnaam
+            ploegnaamOrig = scores[2]
+            if len(ploegnaamOrig) > 25:
+                ploegnaam = (ploegnaamOrig[:25] + '..')
+            else:
+                ploegnaam = ploegnaamOrig;
             tekst = tekst + '<tr>' + DATALEFT.format(DATA = scores[0]) + DATACENTER.format(DATA = ploegnaam) + DATACENTER.format(DATA = scores[3])
             for i in range(0, aantalRondes):
                 tekst = tekst + DATACENTER.format(DATA = scores[5+i])
             if bool(bonus):
-                tekst = tekst + DATACENTER.format(DATA = self.getBonusScore(ploegnaam))
+                tekst = tekst + DATACENTER.format(DATA = self.getBonusScore(ploegnaamOrig))
             schifting = float(scores[len(scores)-2])
             if schifting.is_integer():
                 schifting = int(schifting)
