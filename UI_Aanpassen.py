@@ -193,7 +193,7 @@ class Aanpassen(QtWidgets.QDialog):
             except:
                 text = 'Geen geldige schiftingsvraag!'
                 update = False
-            if len(self.checkboxes)>0:
+            if len(self.checkboxes)>0 and self.RH.numberBonusRondes()>0:
                 aantal = 0
                 bonus = 0
                 for i, box in enumerate(self.checkboxes):
@@ -309,6 +309,7 @@ class Aanpassen(QtWidgets.QDialog):
                                 box.show()
                             else:
                                 box.hide()
+                    self.hideQLayout(self.basicScores)
                     self.schiftingTxt.setText(str(self.score[0]))
                 
                 else:

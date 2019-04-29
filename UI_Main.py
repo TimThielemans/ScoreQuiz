@@ -19,7 +19,17 @@ import UI_Aanmelden
 import UI_Admin
 import UI_Aanpassen
 import decodeSheets
-        
+import ronde_handler
+
+##SETTINGS
+global debug  #kies folder
+global badWebsite  #kies of je dialoog krijgt bij eindstand
+global default
+
+debug = True
+badWebsite = False
+default = 'Kwistet2019/'
+##settings        
 
 class startScherm(QtWidgets.QMainWindow):   
     def __init__(self, parent=None):
@@ -44,6 +54,8 @@ class startScherm(QtWidgets.QMainWindow):
 
         from score_handler import Class_Scores
         self.SH = Class_Scores()
+        from ronde_handler import Class_Rondes
+        self.RH = Class_Rondes()
 
     def keyPressEvent(self, event):
         if type(event)==QtGui.QKeyEvent:
@@ -69,10 +81,9 @@ class startScherm(QtWidgets.QMainWindow):
         parser.read(filename)
         global WACHTWOORD
         WACHTWOORD = parser.get('COMMON', 'wachtwoord')
-        
-        debug = 1
-        default = 'Test/'
-        if debug == 1:
+
+
+        if debug:
             dialog = QtWidgets.QFileDialog()
             dialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
             dialog.setViewMode(QtWidgets.QFileDialog.Detail);
@@ -125,9 +136,14 @@ class startScherm(QtWidgets.QMainWindow):
         self.msgBox("Er werden {} scans verwerkt op {}s. Dat is een gemiddelde van {}s per pagina. Geef jij dat sneller in misschien?".format(aantal, round(tijd, 2), round(tijd/aantal, 2)), 'Klaar!')
 
     def scorebord(self):
-        qm = QtWidgets.QMessageBox()
-        answer = qm.question(QtWidgets.QDialog(), 'Bonus berekening', 'Bereken ook de optimale bonus? (enkel eenmaal bij de eindstand)', qm.Yes | qm.No)
-        geenBonus, geenSchifting, ontbreekt, fout, filenameFull = self.SH.generateScorebord(answer == qm.Yes)
+       
+        berekenBonus = False
+        if self.RH.numberBonusRondes()>0:
+            qm = QtWidgets.QMessageBox()
+            answer = qm.question(QtWidgets.QDialog(), 'Bonus berekening', 'Bereken ook de optimale bonus? (enkel eenmaal bij de eindstand)', qm.Yes | qm.No)
+            berekenBonus = (answer == qm.Yes)
+        
+        geenBonus, geenSchifting, ontbreekt, fout, filenameFull = self.SH.generateScorebord(berekenBonus)
         fouten = False
         info = ''
         if len(geenBonus)>0:
@@ -151,21 +167,19 @@ class startScherm(QtWidgets.QMainWindow):
             titel = 'Klaar'
         self.msgBox(text, titel)
 
-        msg = QtWidgets.QMessageBox()
-        msg.setText('Hoe wil je het scorebord bekijken?')
-        buttonOpenHTML = QtWidgets.QPushButton('Nieuwe HTML openen')
-        buttonDoorsturen = QtWidgets.QPushButton('Doorsturen voor projectie')
-        buttonNiets = QtWidgets.QPushButton('Niets, ik vernieuw zelf wel')
-        msg.addButton(buttonOpenHTML, 0)
-        msg.addButton(buttonDoorsturen, 1)
-        msg.addButton(buttonNiets, 2)
-        reply = msg.exec()
-        if reply == 0:
-            webbrowser.open('file://' + os.path.realpath(filenameFull))
-        elif reply == 1:
-            from email_handler import Class_Emails
-            self.EH = Class_Emails()
-            self.EH.sendTussenstandToTim()
+
+        if badWebsite:
+            msg = QtWidgets.QMessageBox()
+            msg.setText('Scorebord doorsturen via mail?')
+            buttonOpenHTML = QtWidgets.QPushButton('Nee')
+            buttonDoorsturen = QtWidgets.QPushButton('Ja (noodoplossing)')
+            msg.addButton(buttonOpenHTML, 1)
+            msg.addButton(buttonDoorsturen, 0)
+            reply = msg.exec()
+            if reply == 1:
+                from email_handler import Class_Emails
+                self.EH = Class_Emails()
+                self.EH.sendTussenstandToTim()
 
             
             

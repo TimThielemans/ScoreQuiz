@@ -39,6 +39,9 @@ def read_Settings():
         global FTPSERVER
         global FTPUSER
         global FTPPASSWORD
+        global FTPPATH
+        global FTPSCOREBORDPUBLIC
+        global FTPSCOREBORDTIM
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         SCOREBORD = QUIZFOLDER+config.get('PATHS', 'SCOREBORD')
@@ -67,6 +70,9 @@ def read_Settings():
         FTPSERVER = config.get('COMMON', 'FTPSERVER')
         FTPUSER = config.get('COMMON', 'FTPUSER')
         FTPPASSWORD = config.get('COMMON', 'FTPPASSWORD')
+        FTPPATH = config.get('COMMON', 'FTPPATH')
+        FTPSCOREBORDPUBLIC = config.get('COMMON', 'FTPSCOREBORDPUBLIC')
+        FTPSCOREBORDTIM = config.get('COMMON', 'FTPSCOREBORDTIM')
         
     except Exception as error_msg:
         print("Error while trying to read Settings.")
@@ -209,8 +215,13 @@ class Class_Scores():
                 elif ingevoegd == 0:
                     writer.writerow([ronde] + [ploeg] + score)
                     ingevoegd = 1
-                
+                    
                 writer.writerow(row)
+                
+            if ingevoegd == 0 and prefix == USERPREFIX:
+                writer.writerow([ronde] + [ploeg] + score)
+                ingevoegd = 1
+            
         shutil.move(tmp, filename)
 
     def deleteScore(self, ronde, ploeg, prefix):
@@ -281,7 +292,7 @@ class Class_Scores():
                     for index in range(0, len(BONUSTHEMAS)):
                         if bonusScore[index][i]>besteScore:
                             besteScore = bonusScore[index][i]
-                            beste = index
+                            beste = index+1
                 else:
                     start = [ploeginfo['TN'], ploeginfo['Ploegnaam'], ploeginfo['Bonus'], 0]
                     besteScore = 0
@@ -657,7 +668,12 @@ class Class_Scores():
                 maximumScore = int(maximumRondeScore)+ maximumScore
                 gemiddeldeScore = float(gemiddeldeRondeScore) + gemiddeldeScore
 
-        newRow = ['0', '0', 'Gemiddelde', round(float(gemiddeldeScore), 2), round(float(gemiddeldeScore/maximumScore*100), 2)]
+        try:
+
+            newRow = ['0', '0', 'Gemiddelde', round(float(gemiddeldeScore), 2), round(float(gemiddeldeScore/maximumScore*100), 2)]
+        except:
+            newRow = ['0', '0', 'Gemiddelde', round(float(gemiddeldeScore), 2), round(float(0), 2)]
+            
         newRow = newRow + gemiddeldes
         newRow.append('') #schifting
         newRow.append('') #normschifting
@@ -695,29 +711,46 @@ class Class_Scores():
         headers = ''
         body = ''
                 
-        with open(SCOREBORD, mode='rt') as fr: 
+        with open(SCOREBORD, mode='rt') as fr, open(RONDEFILES + FTPSCOREBORDPUBLIC, 'w') as fw:
             reader = csv.reader(fr)
+            writer = csv.writer(fw)
             row1 = next(reader)
+            headerCSV = ['Pos']
+            headerCSV.append('Ploegnaam')
+            headerCSV.append('Tot')
             headers = headers + '"Pos"'
             headers = headers + ', "Ploegnaam"'
             headers = headers + ', "Tot"'
             for i in range(4, len(row1)-1):
                 headers = headers + ', "{}"'.format(row1[i])
+                headerCSV.append(row1[i])
+            writer.writerow(headerCSV)
+
+            maximal = ''
 
             for i, row in enumerate(reader):
-                body = body + '["{}"'.format(row[0])                
+                newCSVRow = [row[0]]
+                newRow = '"{}"'.format(row[0])
                 ploegnaam = row[2]
-               # if len(ploegnaam)>25:
-               #     ploegnaam= ploegnaam[:24]+'..'
-                body = body + ', "{}"'.format(ploegnaam)
-                body = body + ', "{}"'.format(row[3])
-                body = body + ', "{}"'.format(row[4])
+                if len(ploegnaam)>25:
+                    ploegnaam= ploegnaam[:24]+'..'
+                newRow = newRow + ', "{}"'.format(ploegnaam)
+                newCSVRow.append(ploegnaam)
+                newRow = newRow + ', "{}"'.format(row[3])
+                newRow = newRow + ', "{}"'.format(row[4])
+                newCSVRow.append(row[3])
+                newCSVRow.append(row[4])
                 for j in range(5, len(row)-1):#norm schifting moet er niet in
-                    body = body + ', "{}"'.format(row[j])
-                body = body + '],'
+                    newRow = newRow + ',' + row[j]
+                    newCSVRow.append(row[j])
+                if i == 1: #maximum rij onderaan tabel steken (als footer)
+                    maximal = newCSVRow
+                else:
+                    writer.writerow(newCSVRow)
+                body = body + '[' + newRow + '],'
+                
+            writer.writerow(maximal)
 
-        
-        
         template = open(SCORETEMPLATEHTML).read()
         fullHTML = open(SCOREHTMLFULL,"w")
         template = template.replace('{BODY}', body)
@@ -725,25 +758,28 @@ class Class_Scores():
         fullHTML.write(template)
         fullHTML.close()
 
+
         self.uploadScorebordLive()
+        self.uploadScorebordPublic()
+
 
 
     def uploadScorebordPublic(self):
         ftp = ftplib.FTP(FTPSERVER)
         ftp.login(FTPUSER, FTPPASSWORD)  
-        remote_path = "/htdocs/ScorebordFiles"
-        ftp.cwd(remote_path)
-        fh = open(SCOREHTMLFULL, 'rb')
-        ftp.storbinary('STOR Sinterklaasquiz2018.html', fh)
+        #remote_path = "/htdocs/ScorebordFiles"
+        ftp.cwd(FTPPATH)
+        fh = open(RONDEFILES + FTPSCOREBORDPUBLIC, 'rb')
+        ftp.storbinary('STOR ' + FTPSCOREBORDPUBLIC, fh)
         fh.close()
 
     def uploadScorebordLive(self):
         ftp = ftplib.FTP(FTPSERVER)
         ftp.login(FTPUSER, FTPPASSWORD)  
-        remote_path = "/htdocs/ScorebordFiles"
-        ftp.cwd(remote_path)
+        #remote_path = "/htdocs/ScorebordFiles"
+        ftp.cwd(FTPPATH)
         fh = open(SCOREHTMLFULL, 'rb')
-        ftp.storbinary('STOR goLiveTim.html', fh)
+        ftp.storbinary('STOR ' + FTPSCOREBORDTIM, fh)
         fh.close()
 
             

@@ -10,7 +10,6 @@ class Control(QtWidgets.QMainWindow):
         
         self.show()
 
-
         self.nextBtn.clicked.connect(self.nextFile)
         self.updateScoreBtn.clicked.connect(self.updateScore)
         self.allesJustBtn.clicked.connect(self.allesOverzetten)
@@ -167,7 +166,7 @@ class Control(QtWidgets.QMainWindow):
                 schifting = int(self.schiftingTxt.text())
                 nieuwescore.append(schifting)
                 update = True
-                changed = not int(self.score[1])==nieuwescore[0]
+                changed = not int(self.score[0])==nieuwescore[0]
             except:
                 update = False
                 self.schiftingOk = False
@@ -291,6 +290,8 @@ class Control(QtWidgets.QMainWindow):
                                 box.show()
                             else:
                                 box.hide()
+                    else:
+                        self.hideQLayout(self.basicScores)
                     self.schiftingTxt.setText(self.score[0])
                 
                 else:

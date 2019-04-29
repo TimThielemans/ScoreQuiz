@@ -527,7 +527,7 @@ class Class_Inschrijvingen():
             writer = csv.writer(fw)
             reader = csv.reader(fr)
             writer.writerow(next(reader)) #header
-            sorted2 = sorted(reader, key = lambda row: (int(row[1]))) #'sorteer op emailadres
+            sorted2 = sorted(reader, key = lambda row: (row[1])) #'sorteer op emailadres
             for count, row in enumerate(sorted2):
                 writer.writerow(row)
 
