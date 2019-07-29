@@ -153,8 +153,11 @@ class AdminUI(QtWidgets.QDialog):
 
     def emailBetalingQR(self):
         if self.questionBox('Zeker?', 'Zeker dat je vraag tot betaling wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
+            a = 1
             for ploeginfo in self.PH.getPloegenDict():
-                self.EH.sendBetalingQR(ploeginfo)
+                if a>7:
+                    self.EH.sendBetalingQR(ploeginfo)
+                a = a+1
 
     def emailBetalingReminder(self):
         if self.questionBox('Zeker?', 'Zeker dat je de betalingsreminder wil versturen naar iedereen die nog niet betaald heeft? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
@@ -289,6 +292,7 @@ class AdminUI(QtWidgets.QDialog):
 
         
     def updateAllPloegen(self):
+        self.PH.updatePloegGeneral()
         self.PH.autoUpdate()
         #self.PH.sorteerPloegGeneral()
         print('DEBUG mode: Ploeg General is niet gesorteerd om overzicht te behouden, enkel uncomment na de quiz best')

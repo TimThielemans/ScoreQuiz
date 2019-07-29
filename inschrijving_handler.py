@@ -76,7 +76,7 @@ class Class_Inschrijvingen():
             if '@' in ploegdata[3] and '.' in ploegdata[3]:
                 self.addToGlobalDocument('1', ploegdata[1], ploegdata[3])
             else:
-                ploegdata[3] = ''
+                ploegdata[3] = 'hello@timtquiz.com'
             numbers = self.aantalPloegen()
             TN = numbers[1]+1
             IN = numbers[2]+1
@@ -189,7 +189,7 @@ class Class_Inschrijvingen():
             else:
                 drankkaarten = 0
             
-            result['Email'] = '@' in data[X][FIELDNAMES.index('Email')]
+            result['Email'] = not 'hello@timtquiz.com' in data[X][FIELDNAMES.index('Email')]
             result['Aanwezig'] = bool(vorig) #was er al iemand aanwezig van die ploeg?
             result['Drankkaarten'] = drankkaarten
 
@@ -373,7 +373,7 @@ class Class_Inschrijvingen():
         reader = csv.DictReader(open(PLOEGINFO, 'rt'), delimiter=',')
         aantalZonder = 0
         for i, row in enumerate(reader):
-            if not '@' in row['Email']:
+            if 'hello@timtquiz.com' in row['Email']:
                 aantalZonder = aantalZonder +1
         return aantalZonder
 
@@ -515,11 +515,29 @@ class Class_Inschrijvingen():
                     writer.writerow(nieuweRij)
                     print('Nieuwe ploeg:', voornaam, email)
 
-            #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
             shutil.move(tmp, PLOEGGENERAL)
         else:
             print('Testmodus dus niets toevoegd aan {}'.format(PLOEGGENERAL))   
                                 
+    def updatePloegGeneral(self):
+        print('update general')
+        tmp = 'tmp.csv'
+        with open(PLOEGGENERAL, 'rt') as fr, open(tmp, 'w') as fw:
+            reader = csv.reader(fr)
+            writer = csv.writer(fw)
+            headers = next(reader)
+            writer.writerow(headers)
+            for index, row in enumerate(reader):
+                if len(row)<len(headers):
+                    row = row + [0]*(len(headers)-len(row))
+                writer.writerow(row)
+            
+        shutil.move(tmp, PLOEGGENERAL)
+        
+        #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
+        #self.sorteerPloegGeneral()
+        
+
     def sorteerPloegGeneral(self):
         #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
         tmp = 'tmp.csv'
@@ -579,8 +597,8 @@ class Class_Inschrijvingen():
         global FIELDNAMES
         if not (len(DEFHEADERS) + self.RH.aantalRondes() + 1) == len(FIELDNAMES):
             FIELDNAMES = DEFHEADERS
-            if not 'O' in FIELDNAMES:
-                FIELDNAMES.append('O')
+            if not 'O_S' in FIELDNAMES:
+                FIELDNAMES.append('O_S')
             for index, row in enumerate(self.RH.getRondes()):
                 if not row[0] in FIELDNAMES:
                     FIELDNAMES.append(row[0])
@@ -598,10 +616,10 @@ class Class_Inschrijvingen():
                 for i, name in enumerate(FIELDNAMES):
                     try:
                         data = row[name]
-                        if name.replace(' ', '').isdigit():
-                            toWrite[name] = name.replace(' ', '') + '_' + TN
+                        if i>=len(DEFHEADERS):
+                            toWrite[name] = name.replace(' ', '')+ '_' + TN
                         elif not data is '':
-                            toWrite[name] = row[name]
+                            toWrite[name] = data
                         else:
                             toWrite[name] = '0'
                     except KeyError:

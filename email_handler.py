@@ -5,7 +5,7 @@ import math
 import csv
 import pyqrcode
 import base64
-
+import time
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
 def read_Settings():
     try:
@@ -50,6 +50,10 @@ def read_Settings():
         global DATACENTER
         global SCOREHTMLFULL
         global EMAILVRIJEPLAATS
+        global TITEL
+        global GEMEENTE
+        global DATUM
+        global BEDRAGOVERSCHRIJVEN
         
 
         HEADERLEFT = config.get('LAYOUT', 'HEADERLEFT')
@@ -67,6 +71,10 @@ def read_Settings():
         SCOREBORDINFO = QUIZFOLDER + config.get('PATHS', 'SCOREBORDINFO')
         MOEILIJK = QUIZFOLDER + config.get('PATHS', 'MOEILIJK')
         SCHIFTING = float(config.get('COMMON', 'SCHIFTING'))
+        TITEL = config.get('COMMON', 'TITEL')
+        GEMEENTE = config.get('COMMON', 'GEMEENTE')
+        DATUM = config.get('COMMON', 'DATUM')
+        BEDRAGOVERSCHRIJVEN = config.get('COMMON', 'DEFAULTOVERSCHRIJVING')
 
         QRCODES = QUIZFOLDER + config.get('PATHS', 'QRCODES')
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
@@ -117,35 +125,36 @@ class Class_Emails():
         template = open(EMAILINSCHRIJVING).read()
         text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
         to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
-        self.EH.send_HTML_Mail(to_email, 'Bevestiging Inschrijving 7e Kwistet Hellichtquiz', text)
-
+        self.EH.send_HTML_Mail(to_email, 'Bevestiging Inschrijving ' + TITEL, text)
+        
     def wachtlijst(self, ploeginfo):
         template = open(EMAILWACHTLIJST).read()
         text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
         to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
-        self.EH.send_HTML_Mail(to_email, 'Inschrijving 7e Kwistet Hellichtquiz: Wachtlijst', text)
+        self.EH.send_HTML_Mail(to_email, 'Inschrijving ' + TITEL + ': Wachtlijst', text)
 
 
     def sendBetalingQR(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
-        onderwerp = 'Betaling 7e Kwistet Hellichtquiz'
+        onderwerp = 'Betaling ' + TITEL
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
-        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTquiz\nBE15735054557030\nEUR45\n\n{}'.format(mededeling)
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTquiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
         self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
         print(email)
+        time.sleep(1)
 
     def sendBetalingQRSimpel(self, ploeginfo):
         ploegnaam = ploeginfo[2]
         mededeling = ploeginfo[11]
         email = ploeginfo[5]
-        onderwerp = 'Betaling 7e Kwistet Hellichtquiz'
+        onderwerp = 'Betaling ' + TITEL
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
-        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR45\n\n{}'.format(mededeling)
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo[3], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
@@ -156,9 +165,9 @@ class Class_Emails():
         ploegnaam = ploeginfo['Ploegnaam']
         mededeling = ploeginfo['Mededeling']
         email = ploeginfo['Email']
-        onderwerp = 'Herinnering betaling 7e Kwistet Hellichtquiz'
+        onderwerp = 'Herinnering betaling ' + TITEL
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
-        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR45\n\n{}'.format(mededeling)
+        betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
         template = open(EMAILBETALINGSHERINNERING).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
@@ -168,7 +177,7 @@ class Class_Emails():
     def sendWachtlijstUitnogiding(self, ploeginfo):
         ploegnaam = ploeginfo[1]
         email = ploeginfo[4]
-        onderwerp = 'Plaats vrijgekomen 7e Kwistet Hellichtquiz'
+        onderwerp = 'Plaats vrijgekomen ' + TITEL
         template = open(EMAILVRIJEPLAATS).read()
         tekst = template.format(VOORNAAM = ploeginfo[2], PLOEGNAAM = ploegnaam )
         self.EH.send_HTML_Mail(email, onderwerp, tekst)
@@ -177,14 +186,14 @@ class Class_Emails():
     def sendWrapUp(self, ploeginfo):
         ploegnaam = ploeginfo['Ploegnaam']
         email = ploeginfo['Email']
-        onderwerp = 'Laatste informatie 7e Kwistet Hellichtquiz'
+        onderwerp = 'Laatste informatie ' + TITEL
         filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
 
         if bool(int(ploeginfo['Betaald'])):
             mededeling = 'We hebben uw betaling van €{} goed ontvangen'.format(ploeginfo['Bedrag'])
         else:
-            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €25 klaar bij het aanmelden samen met je QR-code.'
+            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €' + INSCHRIJVINGSGELD + ' klaar bij het aanmelden samen met je QR-code. Enkel cash.'
 
         template = open(EMAILLASTINFO).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, BETALINGTEKST = mededeling)
@@ -219,36 +228,46 @@ class Class_Emails():
                 for i in Kwistetindex:
                     if not row[i] == 'x':
                         Kwistetsum = Kwistetsum + int(row[i])
-
+                noMail = False
+                genre = "KWISTET"
                 ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. 
-                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum):  #de quizindex van huidige quiz zetten
+                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:  #de quizindex van huidige quiz zetten en maximaal 80 per 'batch'
                     #nog niet ingeschreven
                     if SCRsum+Kwistetsum+BOWsum>6:
                         template = open(UITNODIGINGFAN).read()
+                        
+                        genre = "FAN"
                     # Eerste elif moet van huidige quiz zijn!
                     elif Kwistetsum > 0:
                         template = open(UITNODIGINGKWISTET).read()
                     elif SCRsum>0:
+                        genre = "SCR"
                         template = open(UITNODIGINGSCR).read()
                     elif BOWsum>0:
+                        genre = "BOW"
+                        noMail = True
                         template = open(UITNODIGINGBOW).read()
                     else:
                         #quizliefhebber, ooit ingeschreven maar terug uitgeschreven ook
                         template = open(UITNODIGINGLIEFHEBBER).read()
 
+                        genre = "liefhebber"
                     try:
                         text = template.format(VOORNAAM=row[0])
                     except KeyError:
                         text = template.format(VOORNAAM=row[0], DEELNAMES = SCRsum+Kwistetsum+BOWsum)
                         pass
-
-                        onderwerp = 'Uitnodiging 7e Kwistet Hellichtquiz Rotselaar 03/08/2019'
-                        adres = row[1]
-                       # self.EH.send_HTML_Mail(adres, onderwerp, text)
-                        print(index, adres)
+                    if noMail:
+                        print(index, row[1], genre, 'Hoeft geen mail te ontvangen')
                     else:
-                        print(index, row[1], 'is al ingeschreven of kreeg al een mail')
-                print('Alles is verstuurd')
+                        onderwerp = 'Uitnodiging ' + TITEL + ' ' + GEMEENTE + ' ' + DATUM
+                        adres = row[1]
+                        self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        print(index, adres, genre)
+                        time.sleep(5)
+                else:
+                    print(index, row[1], 'is al ingeschreven of kreeg al een mail')
+            print('Alles is verstuurd')
 
     def sendUitnodigingenReminder(self, minimum):
         SCRindex = []
@@ -279,14 +298,15 @@ class Class_Emails():
                     if not row[i] == 'x':
                         Kwistetsum = Kwistetsum + int(row[i])
                         
-                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor SCR. Stuurt uitnodiging naar Fans, en de laatste 2 SCR en laatste Kwistet deelnemers
-                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum):
-                    if SCRsum+Kwistetsum+BOWsum>6 or row[Kwistetindex[len(Kwistetindex)-2]]=='1' or row[Kwistetindex[len(Kwistetindex)-3]]=='1' or row[SCRindex[len(SCRindex)-1]]=='1':
+                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor Kwistet. Stuurt uitnodiging naar Fans, en de laatste 2 huidige en laatste andere deelnemers
+                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:
+                    if SCRsum+Kwistetsum+BOWsum>5 or row[Kwistetindex[len(Kwistetindex)-2]]=='1' or row[Kwistetindex[len(Kwistetindex)-3]]=='1' or row[SCRindex[len(SCRindex)-1]]=='1':
                         template = open(UITNODIGINGHERINNERING).read()
                         text = template.format(VOORNAAM=row[0])
-                        onderwerp = 'Herinnering 7e Kwistet Hellichtquiz Rotselaar 03/08/2019'
+                        onderwerp = 'Herinnering ' + TITEL + ' ' + GEMEENTE + ' ' + DATUM
                         adres = row[1]
-                        #self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        self.EH.send_HTML_Mail(adres, onderwerp, text)
+                        time.sleep(5)
                         print(index, adres)
                     else:
                         print(index, row[1], 'Is niet recent naar een quiz geweest')
@@ -304,9 +324,9 @@ class Class_Emails():
             ploegnaam = eindstandPloeg['Ploegnaam']
             tafelnummer = eindstandPloeg['TN']
             email = self.PH.getEmail(ploegnaam)
-            onderwerp = 'Evaluatie 7e Kwistet Hellichtquiz'
+            onderwerp = 'Evaluatie ' + TITEL
             #AANPASSEN naar gelang wat de schiftingsvraag was
-            schifting = str(SCHIFTING) + ' kcal'
+            schifting = str(SCHIFTING) + ' km'
             positie = str(pos) + 'e'
 
             bonusTekst = self.generateBonusTekst(ploegnaam)
@@ -321,11 +341,14 @@ class Class_Emails():
             filename1 = tmp[len(tmp)-1]
             tmp = SCOREHTMLFULL.split('/')
             filename2 = tmp[len(tmp)-1]
-            if email == 'tim.thielemans@gmail.com':
-                print(pos, email)
-            else:
-                print(pos, email)
-                self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
+            #if email == 'hello@timtquiz.com':
+            print(pos, email)
+            self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
+            #else:
+             #   print(pos, email)
+              #  self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
+
+            time.sleep(2)
                 
 
     def sendTussenstandToTim(self):
