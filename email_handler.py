@@ -54,8 +54,9 @@ def read_Settings():
         global GEMEENTE
         global DATUM
         global BEDRAGOVERSCHRIJVEN
+        global LOTING
         
-
+    
         HEADERLEFT = config.get('LAYOUT', 'HEADERLEFT')
         HEADERCENTER = config.get('LAYOUT', 'HEADERCENTER')
         DATALEFT = config.get('LAYOUT', 'DATALEFT')
@@ -63,6 +64,7 @@ def read_Settings():
         TABLELAYOUT = config.get('LAYOUT', 'TABLELAYOUT')
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
+        LOTING = QUIZFOLDER + config.get('PATHS', 'LOTING')
         FINALPREFIX = config.get('COMMON', 'FINALPREFIX')
         MOEILIJKTRESHOLD = float(config.get('COMMON', 'MOEILIJKTRESHOLD'))
         SCOREHTMLFULL = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLFULL')
@@ -506,7 +508,35 @@ class Class_Emails():
         with open(ANTWOORDEN, 'rt')as fr:
             reader = csv.reader(fr)
             return list(reader)
-        
+
+    def sendLoting(self):
+        email = 'timtquiz@gmail.com'
+        onderwerp = 'Loting ' + TITEL
+        filename = LOTING
+        tekst = ' In bijlage vind je de resultaten voor de loting op het einde van de quiz'
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, filename, filename)
+        print(email)
+
+    def saveLoting(self,antwoorden,loting1,loting2,loting3):
+        with open(LOTING, "w") as fw:
+            fw.write(antwoorden[0])
+            fw.write('\n')
+            fw.write('\n')
+            for i in range(len(loting1)):
+                fw.write(loting1[i] + '\n')
+            fw.write('\n')
+            fw.write('\n')
+            fw.write(antwoorden[1])
+            fw.write('\n')
+            fw.write('\n')
+            for i in range(len(loting2)):
+                fw.write(loting2[i] + '\n')
+            fw.write('\n')
+            fw.write('\n')
+            fw.write(antwoorden[2])
+            fw.write('\n')
+            for i in range(len(loting3)):
+                fw.write(loting3[i] + '\n')
 
 
     

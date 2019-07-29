@@ -13,10 +13,12 @@ def read_Settings():
         global RONDEINFO
         global SHEETINFO
         global QUIZFOLDER
+        global ANTWOORDEN
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         RONDEINFO = QUIZFOLDER + config.get('PATHS', 'RONDEINFO')
         SHEETINFO = QUIZFOLDER + config.get('PATHS', 'SHEETINFO')
+        ANTWOORDEN = QUIZFOLDER + config.get('PATHS', 'ANTWOORDEN')
         
         global FIELDNAMES
         f = csv.reader(open(RONDEINFO, 'rt'), delimiter = ',')
@@ -245,6 +247,13 @@ class Class_Rondes():
         data = self.getData()
         for i in range(0, self.aantalRondes()):
             yield data[i+1][FIELDNAMES.index('Ronde')]
+
+    def getAntwoorden(self, RN):
+        reader = csv.reader(open(ANTWOORDEN, 'rt'))
+        for index, row in enumerate(reader):
+            if index == RN:
+                return row
+        return ''
 
         
 #==============================DIT ZIJN INTERNE FUNCTIES ============================================

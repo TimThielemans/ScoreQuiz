@@ -32,7 +32,14 @@ class AdminUI(QtWidgets.QDialog):
         self.origineelPBox.currentIndexChanged.connect(self.fillInfoFields)
         self.origineelRBox.currentIndexChanged.connect(self.fillInfoFields)
         self.origineelWachtlijstPBox.currentIndexChanged.connect(self.fillInfoFields)
-        
+
+        self.rondeloting1.currentIndexChanged.connect(self.fillAntwoorden)
+        self.rondeloting2.currentIndexChanged.connect(self.fillAntwoorden)
+        self.rondeloting3.currentIndexChanged.connect(self.fillAntwoorden)
+
+
+        self.lotingGenereer.clicked.connect(self.maakLoting)
+        self.lotingZenden.clicked.connect(self.maakAndSendLoting)
         self.PAanpassenBtn.clicked.connect(self.updatePloeg)
         self.UitschrijvenBtn.clicked.connect(self.verwijderPloeg)
         self.updatenPBtn.clicked.connect(self.updateAllPloegen)
@@ -74,6 +81,12 @@ class AdminUI(QtWidgets.QDialog):
         self.tafelnummerBox.clear()
         self.rondeNummerBox.clear()
         self.origineelRBox.clear()
+        self.rondeloting1.clear()
+        self.rondeloting2.clear()
+        self.rondeloting3.clear()
+        self.antwoordloting1.clear()
+        self.antwoordloting2.clear()
+        self.antwoordloting3.clear()
         self.origineelWachtlijstPBox.clear()
         for index, ploegnaam in enumerate(self.PH.getPloegNamen()):
             self.origineelPBox.addItem(ploegnaam)
@@ -82,9 +95,15 @@ class AdminUI(QtWidgets.QDialog):
             self.origineelWachtlijstPBox.addItem(ploegnaam)
         for index, rondenaam in enumerate(self.RH.getRondeNames()):
             self.origineelRBox.addItem(rondenaam)
+            self.rondeloting1.addItem(rondenaam)
+            self.rondeloting2.addItem(rondenaam)
+            self.rondeloting3.addItem(rondenaam)
             self.rondeNummerBox.addItem(str(index+1) +': ' +  rondenaam)
             
         self.origineelPBox.setCurrentIndex(-1)
+        self.rondeloting1.setCurrentIndex(-1)
+        self.rondeloting2.setCurrentIndex(-1)
+        self.rondeloting3.setCurrentIndex(-1)
         self.tafelnummerBox.setCurrentIndex(-1)
         self.origineelRBox.setCurrentIndex(-1)
         self.rondeNummerBox.setCurrentIndex(-1)
@@ -137,6 +156,23 @@ class AdminUI(QtWidgets.QDialog):
             self.VoornmTxt.setText('')
             self.AchternmTxt.setText('')
             self.MailTxt.setText('')
+
+    def fillAntwoorden(self):
+        self.antwoordloting1.clear()
+        self.antwoordloting2.clear()
+        self.antwoordloting3.clear()
+        if self.rondeloting1.currentIndex() >= 0:
+            antwoorden = self.RH.getAntwoorden(self.rondeloting1.currentIndex())
+            for i in range(1,len(antwoorden)):
+                self.antwoordloting1.addItem(antwoorden[i])
+        if self.rondeloting2.currentIndex() >= 0:
+            antwoorden = self.RH.getAntwoorden(self.rondeloting2.currentIndex())
+            for i in range(1,len(antwoorden)):
+                self.antwoordloting2.addItem(antwoorden[i])
+        if self.rondeloting3.currentIndex() >= 0:
+            antwoorden = self.RH.getAntwoorden(self.rondeloting3.currentIndex())
+            for i in range(1,len(antwoorden)):
+                self.antwoordloting3.addItem(antwoorden[i])
 
 
     def emailUitnodiging(self):
@@ -345,8 +381,40 @@ class AdminUI(QtWidgets.QDialog):
             return True
         return False
 
+    def maakAndSendLoting(self):
+        self.maakLoting()
+        self.EH.sendLoting()
+
+    def maakLoting(self):
+        juistloting1 = []
+        juistloting2 = []
+        juistloting3 = []
+        ploegnamen = self.PH.getPloegNamen()
+        RN1 = self.rondeloting1.currentIndex()+1
+        VN1 = self.antwoordloting1.currentIndex()+1
+        RN2 = self.rondeloting2.currentIndex()+1
+        VN2 = self.antwoordloting2.currentIndex()+1
+        RN3 = self.rondeloting3.currentIndex()+1
+        VN3 = self.antwoordloting3.currentIndex()+1
+        for i, ploeg in enumerate(ploegnamen):
+            score1 = self.SH.getScore(RN1,i+1)
+            score2 = self.SH.getScore(RN2,i+1)
+            score3 = self.SH.getScore(RN3,i+1)
+            if int(score1[VN1-1]) == int(self.juistloting1.isChecked()):
+                juistloting1.append(ploeg)
+            if int(score2[VN2-1]) == int(self.juistloting2.isChecked()):
+                juistloting2.append(ploeg)
+            if int(score3[VN2-1]) == int(self.juistloting3.isChecked()):
+                juistloting3.append(ploeg)
+                
+        answers = []
+        answers.append(self.antwoordloting1.currentText())
+        answers.append(self.antwoordloting2.currentText())
+        answers.append(self.antwoordloting3.currentText())
         
-       
+        self.EH.saveLoting(answers,juistloting1,juistloting2,juistloting3)
+        
+            
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

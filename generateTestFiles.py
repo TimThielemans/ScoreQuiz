@@ -66,24 +66,34 @@ def main():
     SH.clearImagesDir()
     PH.verwijderAllePloegen()
     RH.verwijderAlleRondes()
-    aantalPloegen = 60
+    aantalPloegen = 58
     for i in range(0, aantalPloegen):
         PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'tim.thielemans@gmail.com'])
         PH.aanmelden('Ploegske{}'.format(i+1))
         PH.setSchiftingBonus('Ploegske{}'.format(i+1), round(SCHIFTING*random.uniform(0.5, 1.5)), random.randint(1,9))
 
-    RH.nieuweRonde(['Ronde1', 'R1', 11, 0, 0])
-    RH.nieuweRonde(['Ronde2', 'R2', 11, 0, 0])
-    RH.nieuweRonde(['Tafelronde1', 'Taf1', 20, 0, 0]) 
-    RH.nieuweRonde(['Ronde3', 'R3', 11, 0, 0]) 
-    RH.nieuweRonde(['Ronde4', 'R4', 11, 0, 0]) 
-    RH.nieuweRonde(['Ronde5', 'R5', 11, 0, 0]) 
-    RH.nieuweRonde(['Ronde6', 'R6', 11, 0, 0])
-    RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
-    RH.nieuweRonde(['Ronde7', 'R7', 11, 0, 0]) 
-    RH.nieuweRonde(['Ronde8', 'R8', 11, 0, 0])
-    RH.nieuweRonde(['Finale', 'Finale', 16, 0, 0])
+   # RH.nieuweRonde(['Ronde1', 'R1', 11, 0, 0])
+   # RH.nieuweRonde(['Ronde2', 'R2', 11, 0, 0])
+   # RH.nieuweRonde(['Tafelronde1', 'Taf1', 20, 0, 0]) 
+   # RH.nieuweRonde(['Ronde3', 'R3', 11, 0, 0]) 
+   # RH.nieuweRonde(['Ronde4', 'R4', 11, 0, 0]) 
+   # RH.nieuweRonde(['Ronde5', 'R5', 11, 0, 0]) 
+   # RH.nieuweRonde(['Ronde6', 'R6', 11, 0, 0])
+   # RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
+   # RH.nieuweRonde(['Ronde7', 'R7', 11, 0, 0]) 
+   # RH.nieuweRonde(['Ronde8', 'R8', 11, 0, 0])
+   # RH.nieuweRonde(['Finale', 'Finale', 16, 0, 0])
 
+    RH.nieuweRonde(['Mollen en kruisen', 'Muziek', 15, 0, 0])
+    RH.nieuweRonde(['Tour', 'Tour', 26, 0, 0])
+    RH.nieuweRonde(['Ketting', 'Taf1', 16, 0, 0]) 
+    RH.nieuweRonde(['Tafel', 'R3', 20, 0, 0]) 
+    RH.nieuweRonde(['Poëzie', 'R4', 15, 0, 0]) 
+    RH.nieuweRonde(['Scrabble', 'R5', 15, 0, 0]) 
+    RH.nieuweRonde(['Foto', 'R6', 16, 0, 0])
+    RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
+    RH.nieuweRonde(['Super', 'R7', 10, 1, 0])
+    
     with open(DEFAULT_OUTPUTDIR+SCANRAW, 'w') as fw:               
         writer = csv.writer(fw)
         check = 0

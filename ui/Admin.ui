@@ -68,8 +68,11 @@
    </item>
    <item row="1" column="1">
     <widget class="QTabWidget" name="tabWidget">
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>4</number>
      </property>
      <widget class="QWidget" name="ploeg">
       <attribute name="title">
@@ -1347,6 +1350,118 @@
            </layout>
           </item>
          </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="Loting">
+      <attribute name="title">
+       <string>Loting</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_10">
+       <item row="7" column="1">
+        <widget class="QPushButton" name="lotingZenden">
+         <property name="text">
+          <string>Genereer en verzend</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QCheckBox" name="juistloting1">
+         <property name="text">
+          <string>Ze moeten het juist hebben</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QComboBox" name="rondeloting2"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="rondeloting1"/>
+       </item>
+       <item row="2" column="1">
+        <spacer name="verticalSpacer_25">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="antwoordloting1"/>
+       </item>
+       <item row="5" column="2">
+        <widget class="QCheckBox" name="juistloting3">
+         <property name="text">
+          <string>Ze moeten het juist hebben</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QCheckBox" name="juistloting2">
+         <property name="text">
+          <string>Ze moeten het juist hebben</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QComboBox" name="rondeloting3"/>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="antwoordloting2"/>
+       </item>
+       <item row="5" column="1">
+        <widget class="QComboBox" name="antwoordloting3"/>
+       </item>
+       <item row="4" column="1">
+        <spacer name="verticalSpacer_26">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="1">
+        <spacer name="verticalSpacer_24">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>61</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="6" column="1">
+        <spacer name="verticalSpacer_27">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="7" column="0">
+        <widget class="QPushButton" name="lotingGenereer">
+         <property name="text">
+          <string>Enkel genereren</string>
+         </property>
         </widget>
        </item>
       </layout>
