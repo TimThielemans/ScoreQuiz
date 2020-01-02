@@ -68,7 +68,7 @@ def main():
     RH.verwijderAlleRondes()
     aantalPloegen = 58
     for i in range(0, aantalPloegen):
-        PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'tim.thielemans@gmail.com'])
+        PH.nieuwePloeg(['Ploegske{}'.format(i+1), 'Tim', 'Thielemans', 'hello@timtquiz.com'])
         PH.aanmelden('Ploegske{}'.format(i+1))
         PH.setSchiftingBonus('Ploegske{}'.format(i+1), round(SCHIFTING*random.uniform(0.5, 1.5)), random.randint(1,9))
 
@@ -85,14 +85,14 @@ def main():
    # RH.nieuweRonde(['Finale', 'Finale', 16, 0, 0])
 
     RH.nieuweRonde(['Mollen en kruisen', 'Muziek', 15, 0, 0])
-    RH.nieuweRonde(['Tour', 'Tour', 26, 0, 0])
-    RH.nieuweRonde(['Ketting', 'Taf1', 16, 0, 0]) 
-    RH.nieuweRonde(['Tafel', 'R3', 20, 0, 0]) 
-    RH.nieuweRonde(['Poëzie', 'R4', 15, 0, 0]) 
-    RH.nieuweRonde(['Scrabble', 'R5', 15, 0, 0]) 
-    RH.nieuweRonde(['Foto', 'R6', 16, 0, 0])
-    RH.nieuweRonde(['Tafelronde2', 'Taf2', 20, 0, 0])
-    RH.nieuweRonde(['Super', 'R7', 10, 1, 0])
+    RH.nieuweRonde(['Tour de France', 'Tour', 26, 0, 0])
+    RH.nieuweRonde(['Kettingronde', 'Ketting', 16, 0, 0]) 
+    RH.nieuweRonde(['Tafelronde 1', 'Tafel1', 20, 0, 0]) 
+    RH.nieuweRonde(['Poëzieronde', 'Poëzie', 15, 0, 0]) 
+    RH.nieuweRonde(['Scrabbleronde', 'Scrabble', 15, 0, 0]) 
+    RH.nieuweRonde(['Fotolinkronde', 'Foto', 16, 0, 0])
+    RH.nieuweRonde(['Tafelronde 2', 'Tafel2', 20, 0, 0])
+    RH.nieuweRonde(['Superronde', 'Super', 10, 1, 0])
     
     with open(DEFAULT_OUTPUTDIR+SCANRAW, 'w') as fw:               
         writer = csv.writer(fw)

@@ -50,14 +50,16 @@ class Inschrijving(QtWidgets.QDialog):
             qm = QtWidgets.QMessageBox()
             answer = qm.question(QtWidgets.QDialog(), 'Email verzenden?', 'De quiz is momenteel volzet en de ploeg werd toevoegd aan de wachtlijst. Standaard wachtlijst email sturen naar {}'.format(email), qm.Yes | qm.No)
             if answer == qm.Yes:
-                self.EH.wachtlijst(subscription)
+                aantalAangemeld, aantalHuidigeInschrijvingen, aantalInschrijvingen, aantalBetaald = self.PH.aantalPloegen()
+                self.EH.wachtlijst(subscription,aantalInschrijvingen)
             self.PloegnaamTxt.setText('')
             self.VoornaamTxt.setText('')
             self.AchternaamTxt.setText('')
             self.EmailTxt.setText('')
 
-        except ValueError:
+        except ValueError as e:
             msg = QtWidgets.QMessageBox()
+            print(e)
             msg.setIcon(QtWidgets.QMessageBox.Warning)
             msg.setText("Deze ploegnaam is al ingebruikt, inschrijving dus niet verwerkt!")
             msg.setWindowTitle("Geen geldige ploegnaam!")

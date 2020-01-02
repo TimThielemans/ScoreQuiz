@@ -28,7 +28,7 @@ global default
 
 debug = True
 badWebsite = False
-default = 'Kwistet2019/'
+default = 'Q@C2019Zaterdag/'
 ##settings        
 
 class startScherm(QtWidgets.QMainWindow):   
@@ -165,7 +165,10 @@ class startScherm(QtWidgets.QMainWindow):
         else:
             text = 'Het scorebord werd berekend zonder fouten!'
             titel = 'Klaar'
+            
         self.msgBox(text, titel)
+        self.SH.generateEvaluatie()
+        
 
 
         if badWebsite:
@@ -184,7 +187,10 @@ class startScherm(QtWidgets.QMainWindow):
             
             
     def admin(self):
-        wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
+        ok = debug
+        wachtwoord = WACHTWOORD
+        if not debug:
+            wachtwoord, ok = QtWidgets.QInputDialog.getText(self, 'Wachtwoord', 'Wachtwoord voor Admin', QtWidgets.QLineEdit.Password)
         if ok and wachtwoord == WACHTWOORD:
             UI_Admin.AdminUI(self)
         from score_handler import Class_Scores

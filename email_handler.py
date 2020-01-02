@@ -6,6 +6,10 @@ import csv
 import pyqrcode
 import base64
 import time
+
+import img2pdf 
+from PIL import Image
+
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
 def read_Settings():
     try:
@@ -31,7 +35,6 @@ def read_Settings():
         global BONUSOVERVIEW
         global BONUSTHEMAS
         global REKENINGNUMMER
-        global TABLELAYOUT
         global MOEILIJK
         global MOEILIJKTRESHOLD
         global EMAILWACHTLIJST
@@ -48,6 +51,8 @@ def read_Settings():
         global HEADERCENTER
         global DATALEFT
         global DATACENTER
+        global TABLELAYOUT
+        
         global SCOREHTMLFULL
         global EMAILVRIJEPLAATS
         global TITEL
@@ -55,13 +60,16 @@ def read_Settings():
         global DATUM
         global BEDRAGOVERSCHRIJVEN
         global LOTING
-        
+        global EVALUATIE
+        global MAXIMAALDEELNEMERS
     
         HEADERLEFT = config.get('LAYOUT', 'HEADERLEFT')
         HEADERCENTER = config.get('LAYOUT', 'HEADERCENTER')
         DATALEFT = config.get('LAYOUT', 'DATALEFT')
         DATACENTER = config.get('LAYOUT', 'DATACENTER')
         TABLELAYOUT = config.get('LAYOUT', 'TABLELAYOUT')
+        
+       
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         LOTING = QUIZFOLDER + config.get('PATHS', 'LOTING')
@@ -77,6 +85,10 @@ def read_Settings():
         GEMEENTE = config.get('COMMON', 'GEMEENTE')
         DATUM = config.get('COMMON', 'DATUM')
         BEDRAGOVERSCHRIJVEN = config.get('COMMON', 'DEFAULTOVERSCHRIJVING')
+        MAXIMAALDEELNEMERS = int(config.get('COMMON', 'MAXIMAALDEELNEMERS'))
+        
+
+        EVALUATIE = QUIZFOLDER + config.get('PATHS', 'EVALUATIE')
 
         QRCODES = QUIZFOLDER + config.get('PATHS', 'QRCODES')
         PLOEGGENERAL = config.get('PATHS', 'PLOEGGENERAL')
@@ -104,7 +116,7 @@ def read_Settings():
 
         if SCHIFTING.is_integer():
             SCHIFTING = int(SCHIFTING)
-        
+
     except Exception as error_msg:
         print("Error while trying to read Settings.")
         print({"Error" : str(error_msg)})
@@ -129,11 +141,11 @@ class Class_Emails():
         to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
         self.EH.send_HTML_Mail(to_email, 'Bevestiging Inschrijving ' + TITEL, text)
         
-    def wachtlijst(self, ploeginfo):
+    def wachtlijst(self, ploeginfo, nummer):
         template = open(EMAILWACHTLIJST).read()
-        text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0])
+        text = template.format(VOORNAAM = ploeginfo[1], PLOEGNAAM = ploeginfo[0], NUMMERWACHTLIJST = str(nummer-MAXIMAALDEELNEMERS))
         to_email = ploeginfo[3].replace('\n', '').replace(' ', '')
-        self.EH.send_HTML_Mail(to_email, 'Inschrijving ' + TITEL + ': Wachtlijst', text)
+        self.EH.send_HTML_Mail(to_email, 'Inschrijving ' + TITEL + ': wachtlijst + misschien zaterdag?', text)
 
 
     def sendBetalingQR(self, ploeginfo):
@@ -143,10 +155,11 @@ class Class_Emails():
         onderwerp = 'Betaling ' + TITEL
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTquiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
-        pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        pyqrcode.create(betalingqr, error='L', version=4).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        qrcode = self.makePDFfromPNG(QRCODES+filename)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
-        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, qrcode, filename.replace('.png', '.pdf'))
         print(email)
         time.sleep(1)
 
@@ -158,9 +171,10 @@ class Class_Emails():
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        qrcode = self.makePDFfromPNG(QRCODES+filename)
         template = open(EMAILBETALINGSVRAAG).read()
         tekst = template.format(VOORNAAM = ploeginfo[3], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER)
-        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, qrcode, filename.replace('.png', '.pdf'))
         print(email)
 
     def sendBetalingReminder(self, ploeginfo):
@@ -171,9 +185,10 @@ class Class_Emails():
         filename = 'Betaling_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         betalingqr = 'BCD\n001\n1\nSCT\nKREDBEBB\nTimTQuiz\nBE15735054557030\nEUR' + BEDRAGOVERSCHRIJVEN + '\n\n{}'.format(mededeling)
         pyqrcode.create(betalingqr, error='M', version=6).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        qrcode = self.makePDFfromPNG(QRCODES+filename)
         template = open(EMAILBETALINGSHERINNERING).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, MEDEDELING = mededeling, INSCHRIJVINGSGELD = INSCHRIJVINGSGELD, DRANKKAART = DRANKKAART , REKENINGNUMMER = REKENINGNUMMER )
-        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, qrcode, filename.replace('.png', '.pdf'))
         print(email)
 
     def sendWachtlijstUitnogiding(self, ploeginfo):
@@ -191,16 +206,20 @@ class Class_Emails():
         onderwerp = 'Laatste informatie ' + TITEL
         filename = 'NeemMijMee_{}.png'.format(ploegnaam.replace('ë', 'e').replace('é','e').replace('ç','c'))
         pyqrcode.create(ploegnaam, error='M', version=5).png(QRCODES + filename, scale=10, quiet_zone = 4)
+        qrcode = self.makePDFfromPNG(QRCODES+filename)
 
         if bool(int(ploeginfo['Betaald'])):
             mededeling = 'We hebben uw betaling van €{} goed ontvangen'.format(ploeginfo['Bedrag'])
         else:
-            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €' + INSCHRIJVINGSGELD + ' klaar bij het aanmelden samen met je QR-code. Enkel cash.'
+            mededeling = 'We hebben nog geen overschrijving ontvangen van jullie. Geen probleem, maar hou dan alvast €' + INSCHRIJVINGSGELD + ' klaar bij het aanmelden. Indien je gisteren, vandaag of komende dagen nog overschrijft (graag), ik verwerk de ochtend van de quiz nog al de betalingen op de rekening!'
 
         template = open(EMAILLASTINFO).read()
         tekst = template.format(VOORNAAM = ploeginfo['Voornaam'], PLOEGNAAM = ploegnaam, BETALINGTEKST = mededeling)
-        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, QRCODES+filename, filename)
+        self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, qrcode, filename.replace('.png', '.pdf'))
         print(email)
+        print(onderwerp)
+        print(qrcode)
+        print(filename)
         
     def sendUitnodigingen(self, minimum):
         SCRindex = []
@@ -231,20 +250,20 @@ class Class_Emails():
                     if not row[i] == 'x':
                         Kwistetsum = Kwistetsum + int(row[i])
                 noMail = False
-                genre = "KWISTET"
                 ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. 
-                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:  #de quizindex van huidige quiz zetten en maximaal 80 per 'batch'
+                if not int(row[SCRindex[len(SCRindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:  #de quizindex van huidige quiz zetten en maximaal 80 per 'batch' Controleert dat de ingeschrevenen geen mail meer krijgen
                     #nog niet ingeschreven
                     if SCRsum+Kwistetsum+BOWsum>6:
                         template = open(UITNODIGINGFAN).read()
-                        
                         genre = "FAN"
                     # Eerste elif moet van huidige quiz zijn!
-                    elif Kwistetsum > 0:
-                        template = open(UITNODIGINGKWISTET).read()
                     elif SCRsum>0:
                         genre = "SCR"
                         template = open(UITNODIGINGSCR).read()
+                    elif Kwistetsum > 0:
+                        genre = "Kwistet"
+                        template = open(UITNODIGINGKWISTET).read()
+                    
                     elif BOWsum>0:
                         genre = "BOW"
                         noMail = True
@@ -252,7 +271,6 @@ class Class_Emails():
                     else:
                         #quizliefhebber, ooit ingeschreven maar terug uitgeschreven ook
                         template = open(UITNODIGINGLIEFHEBBER).read()
-
                         genre = "liefhebber"
                     try:
                         text = template.format(VOORNAAM=row[0])
@@ -300,15 +318,16 @@ class Class_Emails():
                     if not row[i] == 'x':
                         Kwistetsum = Kwistetsum + int(row[i])
                         
-                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor Kwistet. Stuurt uitnodiging naar Fans, en de laatste 2 huidige en laatste andere deelnemers
-                if not int(row[Kwistetindex[len(Kwistetindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:
-                    if SCRsum+Kwistetsum+BOWsum>5 or row[Kwistetindex[len(Kwistetindex)-2]]=='1' or row[Kwistetindex[len(Kwistetindex)-3]]=='1' or row[SCRindex[len(SCRindex)-1]]=='1':
+                ##Dit aanpassen afhankelijk welke quiz het is, de volgorde aanpassen. Dit is voor Kwistet. Stuurt uitnodiging naar Fans, en de laatste 3 huidige en laatste 2 andere quizdeelnemers
+                if not int(row[SCRindex[len(SCRindex)-1]]) == 1 and index>int(minimum) and index<int(minimum)+80:
+                    if SCRsum+Kwistetsum+BOWsum>4 or row[SCRindex[len(SCRindex)-2]]=='1' or row[SCRindex[len(SCRindex)-3]]=='1' or row[SCRindex[len(SCRindex)-4]]=='1' or row[Kwistetindex[len(Kwistetindex)-1]]=='1'or row[Kwistetindex[len(Kwistetindex)-2]]=='1':
                         template = open(UITNODIGINGHERINNERING).read()
                         text = template.format(VOORNAAM=row[0])
-                        onderwerp = 'Herinnering ' + TITEL + ' ' + GEMEENTE + ' ' + DATUM
+                        #onderwerp = 'Herinnering ' + TITEL + ' ' + GEMEENTE + ' ' + DATUM
+                        onderwerp = 'Herinnering ' + TITEL + ' ' + GEMEENTE + ' EXTRA EDITIE op zaterdag 07/12/2019'
                         adres = row[1]
                         self.EH.send_HTML_Mail(adres, onderwerp, text)
-                        time.sleep(5)
+                        time.sleep(2)
                         print(index, adres)
                     else:
                         print(index, row[1], 'Is niet recent naar een quiz geweest')
@@ -319,7 +338,6 @@ class Class_Emails():
     def sendEindstand(self):
         
         aantalDeelnemers,_,_,_ = self.PH.aantalPloegen()
-        self.worstAnsweredQuestions(aantalDeelnemers)
         for i in range(0, aantalDeelnemers):
             pos = i+1
             eindstandPloeg = self.SH.getFinalScore(pos)
@@ -328,29 +346,23 @@ class Class_Emails():
             email = self.PH.getEmail(ploegnaam)
             onderwerp = 'Evaluatie ' + TITEL
             #AANPASSEN naar gelang wat de schiftingsvraag was
-            schifting = str(SCHIFTING) + ' km'
+            schifting = str(SCHIFTING) + ' kcal'
             positie = str(pos) + 'e'
 
-            bonusTekst = self.generateBonusTekst(ploegnaam)
+            bonusTekst = ''
+            if self.RH.numberBonusRondes()>0:
+                bonusTekst = self.generateBonusTekst(ploegnaam)
             rondescores = self.generateEigenOverzicht(tafelnummer)
             eindstand = self.generateNabijeOverzicht(pos, aantalDeelnemers, len(bonusTekst)>1)
             winnaars = self.generateNabijeOverzicht(1,1,len(bonusTekst)>1)
             
             template = open(EMAILEINDSTAND).read()
             tekst = template.format(PLOEGNAAM = ploegnaam, EINDPOSITIE = positie, AANTALDEELNEMERS = aantalDeelnemers, MOEILIJK = MOEILIJKTRESHOLD*100, BONUSTEKST = bonusTekst, SCHIFTINGSANTWOORD = schifting, EIGENOVERZICHT = rondescores, EINDSTANDNABIJ = eindstand, SCOREWINNAARS = winnaars)
-            #self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, 'Moeilijk.txt')
-            tmp = MOEILIJK.split('/')
-            filename1 = tmp[len(tmp)-1]
-            tmp = SCOREHTMLFULL.split('/')
-            filename2 = tmp[len(tmp)-1]
-            #if email == 'hello@timtquiz.com':
+            tmp = EVALUATIE.split('/')
+            filename = tmp[len(tmp)-1]
             print(pos, email)
-            self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
-            #else:
-             #   print(pos, email)
-              #  self.EH.send_HTML_Double_Attachment_Mail(email, onderwerp, tekst, MOEILIJK, filename1, SCOREHTMLFULL, filename2)
-
-            time.sleep(2)
+            self.EH.send_HTML_Attachment_Mail(email, onderwerp, tekst, EVALUATIE, filename)
+            time.sleep(1)
                 
 
     def sendTussenstandToTim(self):
@@ -408,13 +420,14 @@ class Class_Emails():
                             maximumRondeScore = row[0]
                             gemiddeldeRondeScore = round(float(row[1]),1)
 
-                maximumScore = int(maximumRondeScore)+ maximumScore
+                
                 totaalScore = eigenRondeScore + totaalScore
-                gemiddeldeScore = float(gemiddeldeRondeScore) + gemiddeldeScore
+                
 
                 tekst = tekst + '<tr>' + DATALEFT.format(DATA = rondeNaam) + DATACENTER.format(DATA = eigenRondeScore) + DATACENTER.format(DATA = maximumRondeScore) + DATACENTER.format(DATA = gemiddeldeRondeScore) + '</tr>'
-               
-        tekst = tekst + '<tr>' + DATALEFT.format(DATA = 'Totaal') + DATACENTER.format(DATA = str(totaalScore) + ' ({}%)'.format(round(totaalScore/maximumScore*100,2))) + DATACENTER.format(DATA = maximumScore) + DATACENTER.format(DATA = str(round(float(gemiddeldeScore),2)) + ' ({}%)'.format(round(gemiddeldeScore/maximumScore*100,2))) + '</tr>'
+         
+        maximum, gemiddelde, median = self.SH.getStatistics()      
+        tekst = tekst + '<tr>' + DATALEFT.format(DATA = 'Totaal') + DATACENTER.format(DATA = str(totaalScore) + ' ({}%)'.format(round(totaalScore/maximum*100,2))) + DATACENTER.format(DATA = maximum) + DATACENTER.format(DATA = str(round(float(gemiddelde),2)) + ' ({}%)'.format(round(gemiddelde/maximum*100,2))) + '</tr>'
         tekst = tekst + '</table></div>'
         return tekst
 
@@ -519,25 +532,50 @@ class Class_Emails():
 
     def saveLoting(self,antwoorden,loting1,loting2,loting3):
         with open(LOTING, "w") as fw:
-            fw.write(antwoorden[0])
+            fw.write(antwoorden[0] + ' ' + str(len(loting1)))
             fw.write('\n')
             fw.write('\n')
             for i in range(len(loting1)):
                 fw.write(loting1[i] + '\n')
             fw.write('\n')
             fw.write('\n')
-            fw.write(antwoorden[1])
+            fw.write(antwoorden[1] + ' ' + str(len(loting2)))
             fw.write('\n')
             fw.write('\n')
             for i in range(len(loting2)):
                 fw.write(loting2[i] + '\n')
             fw.write('\n')
             fw.write('\n')
-            fw.write(antwoorden[2])
+            fw.write(antwoorden[2] + ' ' + str(len(loting3)))
+            fw.write('\n')
             fw.write('\n')
             for i in range(len(loting3)):
                 fw.write(loting3[i] + '\n')
 
 
-    
+    def makePDFfromPNG(self,original):
+        # storing pdf path
+        pdf_path = original.replace('.png', '.pdf')
+        # opening image 
+        image = Image.open(original) 
+          
+        # converting into chunks using img2pdf 
+        pdf_bytes = img2pdf.convert(image.filename) 
+          
+        # opening or creating pdf file 
+        file = open(pdf_path, "wb") 
+          
+        # writing pdf files with chunks 
+        file.write(pdf_bytes) 
+          
+        # closing image file 
+        image.close() 
+          
+        # closing pdf file 
+        file.close()
+
+        return pdf_path
+
+        
+
 

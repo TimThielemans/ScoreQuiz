@@ -33,11 +33,13 @@ class AdminUI(QtWidgets.QDialog):
         self.origineelRBox.currentIndexChanged.connect(self.fillInfoFields)
         self.origineelWachtlijstPBox.currentIndexChanged.connect(self.fillInfoFields)
 
-        self.rondeloting1.currentIndexChanged.connect(self.fillAntwoorden)
-        self.rondeloting2.currentIndexChanged.connect(self.fillAntwoorden)
-        self.rondeloting3.currentIndexChanged.connect(self.fillAntwoorden)
+        self.rondeloting1.currentIndexChanged.connect(self.fillAntwoorden1)
+        self.rondeloting2.currentIndexChanged.connect(self.fillAntwoorden2)
+        self.rondeloting3.currentIndexChanged.connect(self.fillAntwoorden3)
 
-
+        self.juistloting1.setChecked(1)
+        self.juistloting2.setChecked(1)
+        self.juistloting3.setChecked(1)
         self.lotingGenereer.clicked.connect(self.maakLoting)
         self.lotingZenden.clicked.connect(self.maakAndSendLoting)
         self.PAanpassenBtn.clicked.connect(self.updatePloeg)
@@ -157,18 +159,22 @@ class AdminUI(QtWidgets.QDialog):
             self.AchternmTxt.setText('')
             self.MailTxt.setText('')
 
-    def fillAntwoorden(self):
+    def fillAntwoorden1(self):
         self.antwoordloting1.clear()
-        self.antwoordloting2.clear()
-        self.antwoordloting3.clear()
         if self.rondeloting1.currentIndex() >= 0:
             antwoorden = self.RH.getAntwoorden(self.rondeloting1.currentIndex())
             for i in range(1,len(antwoorden)):
                 self.antwoordloting1.addItem(antwoorden[i])
+                
+    def fillAntwoorden2(self):
+        self.antwoordloting2.clear()
         if self.rondeloting2.currentIndex() >= 0:
             antwoorden = self.RH.getAntwoorden(self.rondeloting2.currentIndex())
             for i in range(1,len(antwoorden)):
                 self.antwoordloting2.addItem(antwoorden[i])
+
+    def fillAntwoorden3(self):
+        self.antwoordloting3.clear()
         if self.rondeloting3.currentIndex() >= 0:
             antwoorden = self.RH.getAntwoorden(self.rondeloting3.currentIndex())
             for i in range(1,len(antwoorden)):
@@ -191,8 +197,7 @@ class AdminUI(QtWidgets.QDialog):
         if self.questionBox('Zeker?', 'Zeker dat je vraag tot betaling wil versturen naar iedereen? Kijk zeker na in email_handler wat het onderwerp is van de mail'):
             a = 1
             for ploeginfo in self.PH.getPloegenDict():
-                if a>7:
-                    self.EH.sendBetalingQR(ploeginfo)
+                self.EH.sendBetalingQR(ploeginfo)
                 a = a+1
 
     def emailBetalingReminder(self):
@@ -332,7 +337,7 @@ class AdminUI(QtWidgets.QDialog):
         self.PH.autoUpdate()
         #self.PH.sorteerPloegGeneral()
         print('DEBUG mode: Ploeg General is niet gesorteerd om overzicht te behouden, enkel uncomment na de quiz best')
-
+        
 
     def updateOverzicht(self):
         aantalAangemeld, aantalHuidigeInschrijvingen, aantalInschrijvingen, aantalBetaald = self.PH.aantalPloegen()
@@ -397,15 +402,18 @@ class AdminUI(QtWidgets.QDialog):
         RN3 = self.rondeloting3.currentIndex()+1
         VN3 = self.antwoordloting3.currentIndex()+1
         for i, ploeg in enumerate(ploegnamen):
-            score1 = self.SH.getScore(RN1,i+1)
-            score2 = self.SH.getScore(RN2,i+1)
-            score3 = self.SH.getScore(RN3,i+1)
-            if int(score1[VN1-1]) == int(self.juistloting1.isChecked()):
-                juistloting1.append(ploeg)
-            if int(score2[VN2-1]) == int(self.juistloting2.isChecked()):
-                juistloting2.append(ploeg)
-            if int(score3[VN2-1]) == int(self.juistloting3.isChecked()):
-                juistloting3.append(ploeg)
+            if self.PH.isAanwezig(i+1):
+                score1 = self.SH.getScore(RN1,i+1)
+                score2 = self.SH.getScore(RN2,i+1)
+                score3 = self.SH.getScore(RN3,i+1)
+                if int(score1[VN1-1]) == int(self.juistloting1.isChecked()):
+                    juistloting1.append(ploeg)
+                if int(score2[VN2-1]) == int(self.juistloting2.isChecked()):
+                    juistloting2.append(ploeg)
+                if int(score3[VN2-1]) == int(self.juistloting3.isChecked()):
+                    juistloting3.append(ploeg)
+            else:
+                i = i-1
                 
         answers = []
         answers.append(self.antwoordloting1.currentText())

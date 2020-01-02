@@ -8,6 +8,8 @@ import configparser, inspect, os
 import statistics
 import ftplib
 
+from fpdf import FPDF, HTMLMixin
+
 
 #================= GET SETTINGS FROM EMAIL SECTION IN settings.ini FILE ==============
 def read_Settings():
@@ -42,6 +44,19 @@ def read_Settings():
         global FTPPATH
         global FTPSCOREBORDPUBLIC
         global FTPSCOREBORDTIM
+        global FTPEVALUATIE
+
+        global HEADEROVERZICHTCENTER
+        global HEADEROVERZICHTLEFT
+        global DATALOVERZICHTLEFT
+        global DATAOVERZICHTCENTER
+        global TABLELAYOUTOVERZICHT
+        global EVALUATIETEMPLATE
+        global EVALUATIE
+
+        global TITEL
+        global MOEILIJKTRESHOLD
+        global ANTWOORDEN
 
         QUIZFOLDER = config.get('PATHS', 'QUIZFOLDER')
         SCOREBORD = QUIZFOLDER+config.get('PATHS', 'SCOREBORD')
@@ -51,7 +66,21 @@ def read_Settings():
         BONUSOVERVIEW = QUIZFOLDER + config.get('PATHS', 'BONUSOVERVIEW')
         BONUSTHEMAS = config.get('COMMON', 'BONUSTHEMAS').split(',')
         AANTALTUSSENSTAND = int(config.get('COMMON', 'AANTALTUSSENSTANDRONDES'))
+        ANTWOORDEN = QUIZFOLDER + config.get('PATHS', 'ANTWOORDEN')
 
+        HEADEROVERZICHTCENTER = config.get('LAYOUT', 'HEADEROVERZICHTCENTER')
+        HEADEROVERZICHTLEFT = config.get('LAYOUT', 'HEADEROVERZICHTLEFT')
+        DATALOVERZICHTLEFT = config.get('LAYOUT', 'DATAOVERZICHTLEFT')
+        DATAOVERZICHTCENTER = config.get('LAYOUT', 'DATAOVERZICHTCENTER')
+        TABLELAYOUTOVERZICHT = config.get('LAYOUT', 'TABLELAYOUTOVERZICHT')
+        EVALUATIETEMPLATE = config.get('LAYOUT', 'EVALUATIETEMPLATE')
+        
+        EVALUATIE = QUIZFOLDER + config.get('PATHS', 'EVALUATIE')
+
+
+        MOEILIJKTRESHOLD = float(config.get('COMMON', 'MOEILIJKTRESHOLD'))
+        TITEL = config.get('COMMON', 'TITEL')
+        
         SCORETEMPLATEHTML = config.get('PATHS', 'SCORETEMPLATE')
         SCOREHTMLFULL = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLFULL')
         SCOREHTMLLAST = QUIZFOLDER+config.get('PATHS', 'SCOREHTMLLAST')
@@ -73,11 +102,14 @@ def read_Settings():
         FTPPATH = config.get('COMMON', 'FTPPATH')
         FTPSCOREBORDPUBLIC = config.get('COMMON', 'FTPSCOREBORDPUBLIC')
         FTPSCOREBORDTIM = config.get('COMMON', 'FTPSCOREBORDTIM')
+        FTPEVALUATIE = config.get('COMMON', 'FTPEVALUATIE')
         
     except Exception as error_msg:
         print("Error while trying to read Settings.")
         print({"Error" : str(error_msg)})
 #=====================================================================================
+class HTML2PDF(FPDF, HTMLMixin):
+    pass
 
 class Class_Scores():
 
@@ -161,6 +193,17 @@ class Class_Scores():
             filename = RONDEFILES + SCANRAW
         else:
             filename = RONDEFILES + USERPREFIX + self.RH.getRondenaam(ronde) + '.csv'
+        with open(filename, 'rt') as fr:
+            reader = csv.reader(fr)
+            next(reader)
+            for i, row in enumerate(reader):
+                if int(row[1]) == int(ploeg) and int(row[0]) == int(ronde):
+                    return row[2:]
+        return []
+
+    def getScoreRondeFinal(self, ronde, ploeg):
+        
+        filename = RONDEFILES + FINALPREFIX + self.RH.getRondenaam(ronde) + '.csv'
         with open(filename, 'rt') as fr:
             reader = csv.reader(fr)
             next(reader)
@@ -707,6 +750,24 @@ class Class_Scores():
         self.visualizeScorebord()
         return geenBonus, geenSchifting, ontbreekt, fout, SCOREHTMLFULL
 
+    def getStatistics(self):
+        mean = 0
+        median = 0
+        maximum = 0
+        with open(SCOREBORD, mode='rt') as fr:
+            reader = csv.reader(fr)
+            row1 = next(reader)
+            row1 = next(reader)
+            row1 = next(reader)
+            maximum = int(row1[3])
+            row1 = next(reader)
+            totalscores = [int(row1[3])]
+            for i, row in enumerate(reader):
+                totalscores.append(int(row[3]))
+            mean = statistics.mean(totalscores)
+            median = statistics.median(totalscores)
+        return maximum, mean, median 
+
     def visualizeScorebord(self):
         headers = ''
         body = ''
@@ -781,6 +842,135 @@ class Class_Scores():
         fh = open(SCOREHTMLFULL, 'rb')
         ftp.storbinary('STOR ' + FTPSCOREBORDTIM, fh)
         fh.close()
+
+    def uploadEvaluatieLive(self):
+        ftp = ftplib.FTP(FTPSERVER)
+        ftp.login(FTPUSER, FTPPASSWORD)  
+        ftp.cwd(FTPPATH)
+        fh = open(EVALUATIE, 'rb')
+        ftp.storbinary('STOR ' + FTPEVALUATIE, fh)
+        fh.close()
+
+
+    def generateEvaluatie(self):
+        
+        heleTekst = ''
+        filenames = []
+        rondenaam = []
+        rondenummer = []
+        aantalDeelnemers,_,_,_ = self.PH.aantalPloegen()
+        
+        with open(SCOREBORDINFO, 'rt') as fr:
+            reader = csv.DictReader(fr)
+            for row in reader:
+                filenames.append(RONDEFILES + FINALPREFIX + row['Ronde'] + '.csv')
+                rondenaam.append(row['Ronde'])
+                rondenummer.append(int(row['RN']))
+
+        antwoordLimiet = int(math.ceil(aantalDeelnemers*MOEILIJKTRESHOLD))
+        with open(ANTWOORDEN, 'rt')as fr:
+            reader = csv.reader(fr)
+            antwoorden = list(reader)
+        for index, file in enumerate(filenames):
+            try:
+                RNaam =rondenaam[index]
+                RN = rondenummer[index]
+                with open(file, 'rt') as fr:
+                    reader =csv.reader(fr)
+                    if 'Bonus' in next(reader):
+                        compensatieBonus = 1
+                    else:
+                        compensatieBonus = 0
+                    if self.RH.isSuperRonde(RN) == 1:
+                        superronde = True
+                    else:
+                        superronde = False
+
+
+                    eindstandPloeg = self.getFinalScore(1)
+                    TN = int(eindstandPloeg['TN'])
+                    scoreWinnaar = self.getScoreRondeFinal(RN, TN)
+                    
+                    for row in reader:
+                        if 'Max/Gem' in row:
+                            aantalJuist = row[2:len(row)-1]
+                            aantalJuist = list(map(int, aantalJuist))
+                            gemiddelde = row[1]
+                            maximum = row[0]
+                            rondeTekst = '<h2>' + RNaam + '</h2>'
+                            rondeTekst = rondeTekst + '<h4>' + 'Gemiddelde score: ' + str(gemiddelde) + '/' + str(maximum) + '</h4>'
+
+                            #rondeTekst = rondeTekst + '<p>' + TABLELAYOUTOVERZICHT + '<thead>' + '<tr>' + HEADEROVERZICHTLEFT.format(HEADER = 'Nr.') + HEADEROVERZICHTCENTER.format(HEADER = 'Antwoord') + HEADEROVERZICHTLEFT.format(HEADER = '#Juist') + '</tr>' +'</thead>' + '<tbody>'
+                            #rondeTekst = rondeTekst + TABLELAYOUTOVERZICHT.format(HEADER1 = 'Nr.', HEADER2 = 'Antwoord', HEADER3 = '#juist')
+                            rondeTekst = rondeTekst + """<table border="0" align="center" width="70%"> <thead><tr><th width="10%"> Nr. </th><th width="80%">Antwoord</th><th width="10%">#Juist</th></tr></thead><tbody>"""
+
+                            
+                            for i in range(0, len(aantalJuist)-compensatieBonus):
+                                moeilijk = False
+                                winnaarsfout = False
+                                
+                                VN = i+1
+                                VNstr = str(VN)
+                                if superronde:
+                                    VNstr1 = str(int(i/3)+1)
+                                    if i%3==2:
+                                        VNstr = VNstr1 + "c"
+                                    elif i%3==1:
+                                        VNstr = VNstr1 + "b"
+                                    else:
+                                        VNstr = VNstr1 + "a"
+                                        
+
+                                if aantalJuist[i]<=antwoordLimiet:
+                                    moeilijk = True
+
+                                if int(scoreWinnaar[i])==0:
+                                    winnaarsfout = True
+
+                                
+                                    
+                                
+                                if moeilijk:
+                                    nieuwelijn = """<td  align="center">""" +'<B>' + VNstr + '</B>' + """</td><td  align="center">""" +'<B>' + str(antwoorden[RN-1][VN]) + '</B>' + """</td><td align="center">""" +'<B>' + str(aantalJuist[i]) + '</B>' + """</td>"""
+                                    #nieuwelijn = '' + DATAOVERZICHTCENTER.format(DATA = '<B>' + VNstr + '</B>') + DATAOVERZICHTCENTER.format(DATA = '<B>' + str(antwoorden[RN-1][VN]) + '</B>') + DATAOVERZICHTCENTER.format(DATA = '<B>' + str(aantalJuist[i]) + '</B>')
+                                else:
+                                    #nieuwelijn = '' + DATAOVERZICHTCENTER.format(DATA = VNstr) + DATAOVERZICHTCENTER.format(DATA = antwoorden[RN-1][VN]) + DATAOVERZICHTCENTER.format(DATA = str(aantalJuist[i]))
+                                    nieuwelijn = """<td  align="center">"""  + VNstr +  """</td><td  align="center">""" + str(antwoorden[RN-1][VN]) + """</td><td align="center">""" + str(aantalJuist[i]) + """</td>"""
+                                    
+                                if winnaarsfout:
+                                    rondeTekst = rondeTekst + """<tr bgcolor="#FFCACA">""" + nieuwelijn + "</tr>"
+                                else:
+                                    rondeTekst = rondeTekst + "<tr>" + nieuwelijn + "</tr>"
+                                    
+                    heleTekst = heleTekst + rondeTekst + "</tbody>" + "</table>" 
+                    
+            except:
+                print('Fout!')
+                print(index, rondenaam, rondenummer)
+                print(RNaam, RN, VN)
+                pass                                        
+
+
+        maximum, gemiddelde,mediaan = self.getStatistics()
+        atekst = """<table border="0" align="center" width="45%">
+        <thead><tr><th width="40%"> Totaal </th><th width="30%"> """ + str(maximum) + """</th><th width="30%"> """ + str(round(maximum/maximum*100,2)) + """ % </th></tr></thead>
+        <tbody>
+        <tr><td  align="center">gemiddelde</td><td align="center">""" +str(round(gemiddelde,2)) + """</td><td  align="center">""" +str(round(gemiddelde/maximum*100,2)) + """ % </td></tr>
+        <tr><td  align="center">mediaan</td><td align="center">""" +str(mediaan) + """</td><td  align="center">""" +str(round(mediaan/maximum*100,2)) + """ % </td></tr>
+        </tbody>
+        </table>
+        """
+        
+        template = open(EVALUATIETEMPLATE).read()
+        text = template.format(TITEL = TITEL, PERCENTAGE =  MOEILIJKTRESHOLD*100, AANTAL = aantalDeelnemers, TOTAAL_OVERZICHT = atekst, RONDE_OVERZICHT = heleTekst)
+
+        
+        pdf = HTML2PDF()
+        pdf.add_page()
+        pdf.write_html(text)
+        pdf.output(EVALUATIE)
+
+        self.uploadEvaluatieLive()
 
             
 

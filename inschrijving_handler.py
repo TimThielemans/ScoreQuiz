@@ -97,6 +97,7 @@ class Class_Inschrijvingen():
                 raise NameError('Wachtlijst')
         else:
             print('niet uniek')
+            print(str(dubbelenaam))
             #inschrijving is niet gelukt want de ploegnaam bestaat al!
             raise ValueError('Ploegnaam is niet uniek!')
 
@@ -535,7 +536,7 @@ class Class_Inschrijvingen():
         shutil.move(tmp, PLOEGGENERAL)
         
         #SORTEER HET MAAR EEN KEER VLAK NA DE QUIZ ANDERS IS HET OVERZICHT VOLLEDIG WEG VOOR TESTFILES E.d
-        #self.sorteerPloegGeneral()
+        self.sorteerPloegGeneral()
         
 
     def sorteerPloegGeneral(self):
